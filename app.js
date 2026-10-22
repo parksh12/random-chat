@@ -606,12 +606,19 @@ function joinRoom(roomId, peerNick, peerUid, peerProfile) {
     }
   });
 
-  // 상대 닉네임 실시간 반영 (상대가 위치 켜고 끄며 닉네임 바뀌면 갱신)
+  // 상대 닉네임 변경 시: 이름 갱신 + 대화창에 "이전 → 새이름" 안내 (최초 값은 생략)
   if (peerUid) {
     const nref = db.ref("rooms/" + roomId + "/members/" + peerUid + "/nick");
     state._peerNickRef = nref;
+    let prevNick = null;
     nref.on("value", (snap) => {
-      if (snap.val() && state.roomId === roomId) $("peer-name").textContent = snap.val();
+      const v = snap.val();
+      if (!v || state.roomId !== roomId) return;
+      $("peer-name").textContent = v;
+      if (prevNick && prevNick !== v) {
+        addSystem("상대방 닉네임이 " + prevNick + " → " + v + " 로 변경되었습니다.");
+      }
+      prevNick = v;
     });
   }
 }
