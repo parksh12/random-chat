@@ -23,6 +23,7 @@ function login() {
     .catch((e) => { $("login-msg").textContent = "로그인 실패: " + (e.code || e.message); });
 }
 $("btn-logout").addEventListener("click", () => auth.signOut());
+$("btn-refresh").addEventListener("click", () => location.reload());
 
 auth.onAuthStateChanged((u) => {
   if (u) {
