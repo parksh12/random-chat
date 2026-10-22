@@ -22,6 +22,12 @@
         ".write": "auth != null && (!data.exists() || auth.uid === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33')"
       },
       ".indexOn": ["ts"]
+    },
+    "banned": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33'"
+      }
     }
   }
 }

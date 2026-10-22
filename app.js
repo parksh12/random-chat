@@ -345,6 +345,18 @@ function firebaseStartMatching() {
 
 function doMatch() {
   if (state.roomId) return;              // 이미 매칭됨
+  // 차단된 사용자는 매칭 거부
+  db.ref("banned/" + uid).once("value", (bs) => {
+    if (bs.val() === true) {
+      show("ready");
+      alert("이용이 제한된 계정입니다.");
+      return;
+    }
+    doMatchInner();
+  });
+}
+
+function doMatchInner() {
   let claimed = null;
   const wref = db.ref("waiting");
   wref.transaction((cur) => {
@@ -357,8 +369,15 @@ function doMatch() {
     return null;             // 상대를 데려가고 대기열 비움
   }, (err, committed) => {
     if (err || !committed) { setTimeout(firebaseStartMatching, 400); return; }
-    if (claimed) startRoomAsHost(claimed);
-    else waitForAssignment();
+    if (claimed) {
+      // 잡은 상대가 차단된 사용자면 무시하고 다시 시도
+      db.ref("banned/" + claimed.uid).once("value", (bs) => {
+        if (bs.val() === true) { setTimeout(firebaseStartMatching, 300); return; }
+        startRoomAsHost(claimed);
+      });
+    } else {
+      waitForAssignment();
+    }
   });
 }
 

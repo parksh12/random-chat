@@ -79,9 +79,10 @@ function renderReports(list) {
     acts.className = "acts";
     const btnLog = document.createElement("button");
     btnLog.className = "ghost"; btnLog.textContent = "대화 보기";
-    const btnConn = document.createElement("button");
-    btnConn.className = "primary"; btnConn.textContent = "이 이용자에게 연결";
-    acts.appendChild(btnLog); acts.appendChild(btnConn);
+    const btnBan = document.createElement("button");
+    btnBan.className = "primary"; btnBan.textContent = "차단";
+    btnBan.disabled = !r.peerUid;
+    acts.appendChild(btnLog); acts.appendChild(btnBan);
     row.appendChild(left); row.appendChild(acts);
     item.appendChild(row);
 
@@ -91,7 +92,24 @@ function renderReports(list) {
     item.appendChild(log);
 
     btnLog.addEventListener("click", () => log.classList.toggle("open"));
-    btnConn.addEventListener("click", () => connectUser(r.peerUid, r.peerNick));
+    // 현재 차단 상태 반영
+    if (r.peerUid) {
+      db.ref("banned/" + r.peerUid).on("value", (bs) => {
+        const banned = bs.val() === true;
+        btnBan.textContent = banned ? "차단 해제" : "차단";
+        btnBan.className = banned ? "ghost" : "primary";
+      });
+      btnBan.addEventListener("click", () => {
+        db.ref("banned/" + r.peerUid).once("value", (bs) => {
+          const banned = bs.val() === true;
+          if (banned) {
+            db.ref("banned/" + r.peerUid).remove();
+          } else if (confirm("이 이용자를 차단할까요?\n차단하면 더 이상 매칭되지 않습니다.")) {
+            db.ref("banned/" + r.peerUid).set(true);
+          }
+        });
+      });
+    }
     box.appendChild(item);
   });
 }
