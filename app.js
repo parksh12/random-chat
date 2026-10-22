@@ -173,9 +173,10 @@ function startMatching() {
   } else {
     // 데모: 2초 뒤 가짜 상대와 연결
     state._demoTimer = setTimeout(() => {
-      $("peer-name").textContent = "상대방" + Math.floor(1000 + Math.random() * 9000);
+      const peer = "상대방" + Math.floor(1000 + Math.random() * 9000);
+      $("peer-name").textContent = peer;
       enterChat();
-      addSystem("상대와 연결되었습니다. (데모 모드)");
+      addSystem(peer + "님과 연결되었습니다.");
     }, 2000);
   }
 }
@@ -223,23 +224,37 @@ $("btn-photo-save").addEventListener("click", savePhoto);
 async function savePhoto() {
   const url = $("photo-viewer").dataset.url;
   if (!url) return;
-  const name = "random-chat-" + Date.now() + ".jpg";
+  let blob;
   try {
-    // 이미지를 내려받아 blob으로 저장 (외부 URL도 강제 다운로드)
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    blob = await (await fetch(url)).blob();
   } catch (e) {
-    // 실패 시 새 탭으로 열어 길게 눌러 저장하도록 안내
+    // 이미지를 못 읽으면 새 탭으로 열어 길게 눌러 저장
     window.open(url, "_blank");
-    alert("자동 저장이 막혔어요. 열린 사진을 길게 눌러 저장하세요.");
+    alert("열린 사진을 길게 눌러 저장하세요.");
+    return;
   }
+  const ext = (blob.type.split("/")[1] || "jpg").replace("jpeg", "jpg");
+  const name = "random-chat-" + Date.now() + "." + ext;
+  const file = new File([blob], name, { type: blob.type || "image/jpeg" });
+
+  // 모바일: 공유 시트로 '사진/갤러리에 저장' 선택 가능
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;  // 사용자가 취소
+      // 공유 실패 시 아래 다운로드로 진행
+    }
+  }
+  // 데스크톱 등: 파일 다운로드 (안드로이드 크롬은 보통 갤러리에 표시됨)
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 function addSystem(text) { addMsg("sys", text); }
 
