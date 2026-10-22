@@ -49,7 +49,7 @@ if (hasFirebase) {
   firebase.initializeApp(window.FIREBASE_CONFIG);
   db = firebase.database();
   auth = firebase.auth();
-  auth.onAuthStateChanged((u) => { if (u) uid = u.uid; });
+  auth.onAuthStateChanged((u) => { if (u) { uid = u.uid; attachAssignListener(); } });
   auth.signInAnonymously().catch((e) => {
     console.error("익명 로그인 실패", e);
     alert("서버 연결에 실패했어요. 잠시 후 새로고침 해주세요.");
@@ -370,29 +370,43 @@ function startRoomAsHost(peer) {
 }
 
 function waitForAssignment() {
-  // 대기 중 연결 끊기면 대기열에서 자동 제거
-  const wref = db.ref("waiting");
-  wref.onDisconnect().remove();
-  state._waitRef = wref;
-  const aref = db.ref("assign/" + uid);
-  state._assignRef = aref;
-  aref.on("value", (snap) => {
+  // 대기 중 연결이 끊기면 대기열에서 자동 제거. 방 배정은 전역 리스너가 처리.
+  db.ref("waiting").onDisconnect().remove();
+}
+
+// 전역 배정 리스너: 일반 매칭과 관리자의 '특정인 지정'을 모두 처리.
+// 대화 중이어도 새 방이 배정되면(관리자 강제 연결) 현재 대화를 종료하고 이동.
+let _assignAttached = false;
+function attachAssignListener() {
+  if (_assignAttached || !uid) return;
+  _assignAttached = true;
+  db.ref("assign/" + uid).on("value", (snap) => {
     const v = snap.val();
-    if (v && v.roomId) {
-      aref.off();
-      aref.remove();
-      wref.onDisconnect().cancel();
-      db.ref("rooms/" + v.roomId + "/members").once("value", (ms) => {
-        const m = ms.val() || {};
-        const pk = Object.keys(m).find((k) => k !== uid);
-        joinRoom(v.roomId, pk ? m[pk].nick : "상대방");
-      });
-    }
+    if (!v || !v.roomId || v.roomId === state.roomId) return;
+    db.ref("assign/" + uid).remove();
+    db.ref("rooms/" + v.roomId).once("value", (rs) => {
+      const room = rs.val();
+      if (!room || room.closed) return;      // 이미 사라진/닫힌 방이면 무시
+      if (state.roomId) {                    // 대화 중이면 현재 방 종료
+        db.ref("rooms/" + state.roomId + "/closed").set(true);
+        detachRoom();
+        state.roomId = null;
+      }
+      db.ref("waiting").onDisconnect().cancel();
+      const m = room.members || {};
+      const pk = Object.keys(m).find((k) => k !== uid);
+      joinRoom(v.roomId, pk ? m[pk].nick : "상대방");
+    });
   });
 }
 
 function joinRoom(roomId, peerNick) {
   state.roomId = roomId;
+  // 상대 uid 기억 (신고 대상 식별용)
+  db.ref("rooms/" + roomId + "/members").once("value", (ms) => {
+    const m = ms.val() || {};
+    state.peerUid = Object.keys(m).find((k) => k !== uid) || null;
+  });
   $("peer-name").textContent = peerNick || "상대방";
   enterChat();
   addSystem((peerNick || "상대방") + "님과 연결되었습니다.");
@@ -460,7 +474,8 @@ function firebaseLeave() {
 function firebaseReport(reason) {
   const roomId = state.roomId;
   const report = { reason: reason, reporter: uid, reporterNick: state.nick,
-                   peerNick: $("peer-name").textContent, roomId: roomId || null, ts: now() };
+                   peerNick: $("peer-name").textContent, peerUid: state.peerUid || null,
+                   roomId: roomId || null, ts: now() };
   if (roomId) {
     // 신고 시점의 대화 로그를 함께 저장 (운영자 확인용)
     db.ref("rooms/" + roomId + "/messages").once("value", (snap) => {
