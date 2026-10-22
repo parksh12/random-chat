@@ -12,10 +12,12 @@ function show(name) {
 const hasFirebase = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey);
 
 // ---- 상태 ----
+const LOC_KEY = "rc_loc_choice";   // "on" | "off" | null(아직 선택 안 함)
 const state = {
   region: "미정",
   nick: "미정0000",
   coords: null,
+  locOn: false,
 };
 
 // 대화명: 지역 + 4자리 숫자
@@ -23,19 +25,20 @@ function makeNick(region) {
   const n = String(Math.floor(1000 + Math.random() * 9000));
   return (region || "미정") + n;
 }
-
-// ---- 1단계: 동의 ----
-$("agree-check").addEventListener("change", (e) => {
-  $("btn-agree").disabled = !e.target.checked;
-});
-$("btn-agree").addEventListener("click", () => {
+function refreshNick() {
   state.nick = makeNick(state.region);
   $("nick-preview").textContent = state.nick;
-  show("ready");
-});
+}
 
-// ---- 2단계: 위치 / 입장 준비 ----
-$("btn-loc").addEventListener("click", () => {
+function savedLocChoice() {
+  try { return localStorage.getItem(LOC_KEY); } catch (e) { return null; }
+}
+function saveLocChoice(v) {
+  try { localStorage.setItem(LOC_KEY, v); } catch (e) {}
+}
+
+// 위치 켜기: 권한 요청 → 성공 시 지역 반영
+function enableLocation() {
   if (!navigator.geolocation) {
     $("loc-status").textContent = "위치: 지원 안 함";
     return;
@@ -45,13 +48,71 @@ $("btn-loc").addEventListener("click", () => {
     async (pos) => {
       state.coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       state.region = await regionFromCoords(state.coords);
-      state.nick = makeNick(state.region);
-      $("nick-preview").textContent = state.nick;
-      $("loc-status").textContent = "위치: " + state.region;
+      state.locOn = true;
+      saveLocChoice("on");
+      refreshNick();
+      applyLocUI();
+      if (hasFirebase) firebaseUpdateRegion(state.region);
     },
-    () => { $("loc-status").textContent = "위치: 거부됨 (미정)"; },
+    () => {
+      state.locOn = false;
+      saveLocChoice("off");
+      $("loc-status").textContent = "위치: 거부됨 (미정)";
+      applyLocUI();
+    },
     { enableHighAccuracy: false, timeout: 8000 }
   );
+}
+
+// 위치 끄기: 미정으로 되돌림
+function disableLocation() {
+  state.locOn = false;
+  state.coords = null;
+  state.region = "미정";
+  saveLocChoice("off");
+  refreshNick();
+  applyLocUI();
+  if (hasFirebase) firebaseUpdateRegion(state.region);
+}
+
+// 위치 상태를 준비화면·채팅 버튼에 모두 반영
+function applyLocUI() {
+  const choice = savedLocChoice();
+  // 입장 준비 화면: 아직 한 번도 선택 안 했으면 '동의' 버튼, 선택했으면 상태만 표시
+  const firstTime = choice === null;
+  $("loc-row").style.display = firstTime ? "flex" : "none";
+  $("loc-after").style.display = firstTime ? "none" : "block";
+  $("loc-status").textContent = "위치: " + (state.locOn ? state.region : "미정");
+  $("loc-after").textContent = state.locOn
+    ? "위치: " + state.region + " · 대화 중 📍 버튼으로 끌 수 있어요"
+    : "위치: 미정 · 대화 중 📍 버튼으로 켤 수 있어요";
+  // 채팅 헤더 토글 버튼
+  const t = $("btn-loc-toggle");
+  t.textContent = "📍 " + (state.locOn ? state.region : "미정");
+  t.classList.toggle("on", state.locOn);
+}
+
+// ---- 1단계: 동의 ----
+$("agree-check").addEventListener("change", (e) => {
+  $("btn-agree").disabled = !e.target.checked;
+});
+$("btn-agree").addEventListener("click", () => {
+  refreshNick();
+  applyLocUI();
+  show("ready");
+});
+
+// ---- 2단계: 위치 / 입장 준비 ----
+$("btn-loc").addEventListener("click", enableLocation);
+$("btn-loc-skip").addEventListener("click", () => {
+  saveLocChoice("off");
+  state.locOn = false;
+  applyLocUI();
+});
+// 채팅 중 위치 토글
+$("btn-loc-toggle").addEventListener("click", () => {
+  if (state.locOn) disableLocation();
+  else enableLocation();
 });
 
 // 좌표 → 지역명. 지금은 간단 변환(데모). 추후 정식 역지오코딩으로 교체.
@@ -135,18 +196,32 @@ $("photo-input").addEventListener("change", (e) => {
   if (hasFirebase) firebaseSendPhoto(file);
 });
 
-// 나가기
-$("btn-leave").addEventListener("click", () => {
+// 나가기 = 현재 대화 종료 후 바로 다음 상대 매칭
+$("btn-leave").addEventListener("click", nextPartner);
+function nextPartner() {
   if (hasFirebase) firebaseLeave();
   clearTimeout(state._demoTimer);
-  show("ready");
-});
+  closeReport();
+  refreshNick();               // 새 상대에게는 새 대화명
+  show("waiting");
+  startMatching();
+}
 
-// 신고 (신고된 대화/사진만 운영자에게 전달)
-$("btn-report").addEventListener("click", () => {
-  if (!confirm("이 대화를 운영자에게 신고할까요?\n신고된 대화와 사진이 운영자에게 전달됩니다.")) return;
-  if (hasFirebase) firebaseReport();
-  addSystem("신고가 접수되었습니다. 운영자가 확인합니다.");
+// ---- 신고 사유 선택 ----
+function openReport() { $("report-modal").classList.add("open"); }
+function closeReport() { $("report-modal").classList.remove("open"); }
+$("btn-report").addEventListener("click", openReport);
+$("btn-report-cancel").addEventListener("click", closeReport);
+$("report-modal").addEventListener("click", (e) => {
+  if (e.target === $("report-modal")) closeReport();  // 바깥 누르면 닫기
+});
+document.querySelectorAll(".reason").forEach((b) => {
+  b.addEventListener("click", () => {
+    const reason = b.dataset.reason;
+    closeReport();
+    if (hasFirebase) firebaseReport(reason);
+    addSystem("신고가 접수되었습니다 (" + reason + "). 운영자가 확인합니다.");
+  });
 });
 
 // ---- Firebase 연동 (프로젝트 생성 후 구현 예정) ----
@@ -155,7 +230,8 @@ function firebaseCancelMatching() {}
 function firebaseSendText(t) {}
 function firebaseSendPhoto(f) {}
 function firebaseLeave() {}
-function firebaseReport() {}
+function firebaseReport(reason) {}
+function firebaseUpdateRegion(region) {}
 
 // 모바일 키보드 대응: 보이는 영역 높이를 채팅 화면에 반영
 function fitViewport() {

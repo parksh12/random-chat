@@ -46,10 +46,12 @@
     <div class="card">
       <h1>입장 준비</h1>
       <p>지역 매칭을 위해 위치를 사용할 수 있어요. 원치 않으면 건너뛰세요.</p>
-      <div class="row">
+      <div class="row" id="loc-row">
         <button id="btn-loc" class="secondary">📍 위치 사용 동의</button>
+        <button id="btn-loc-skip" class="secondary">건너뛰기</button>
         <span id="loc-status" class="loc">위치: 미정</span>
       </div>
+      <p id="loc-after" class="fine" style="display:none"></p>
       <p>내 대화명: <b id="nick-preview">—</b></p>
       <button id="btn-start" class="primary">대화 상대 찾기</button>
       <p class="fine">대화명은 지역+숫자로 자동 생성됩니다.</p>
@@ -70,8 +72,9 @@
     <header class="chat-head">
       <span>상대: <b id="peer-name">—</b></span>
       <div>
-        <button id="btn-report" class="report" title="신고">🚨 신고</button>
-        <button id="btn-leave" class="leave">나가기</button>
+        <button id="btn-loc-toggle" class="loctoggle" title="위치 사용 켜기/끄기">📍 미정</button>
+        <button id="btn-report" class="report" title="신고">🚨</button>
+        <button id="btn-leave" class="leave">다음 상대 ›</button>
       </div>
     </header>
     <div id="messages" class="messages"></div>
@@ -83,6 +86,25 @@
       <button type="submit" class="primary">전송</button>
     </form>
   </section>
+
+  <!-- 신고 사유 선택 -->
+  <div id="report-modal" class="modal">
+    <div class="sheet">
+      <h2>신고 사유를 선택하세요</h2>
+      <p class="fine">선택한 사유와 함께 이 대화·사진이 운영자에게 전달됩니다.</p>
+      <div class="reasons">
+        <button class="reason" data-reason="성적/음란 행위">성적·음란 행위</button>
+        <button class="reason" data-reason="불법촬영물/성착취물">불법촬영물·성착취물</button>
+        <button class="reason" data-reason="미성년자 의심">미성년자로 의심됨</button>
+        <button class="reason" data-reason="욕설/혐오/비방">욕설·혐오·비방</button>
+        <button class="reason" data-reason="스팸/광고">스팸·광고</button>
+        <button class="reason" data-reason="사기/금전 요구">사기·금전 요구</button>
+        <button class="reason" data-reason="개인정보 요구/유포">개인정보 요구·유포</button>
+        <button class="reason" data-reason="기타">기타</button>
+      </div>
+      <button id="btn-report-cancel" class="secondary wide">취소</button>
+    </div>
+  </div>
 
   <script src="config.js"></script>
   <script src="app.js"></script>

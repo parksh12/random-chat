@@ -77,8 +77,10 @@ button { font: inherit; border: none; border-radius: 12px; padding: 14px 16px;
 }
 .chat-head span { font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-head > div { display: flex; gap: 6px; flex: none; }
-.leave { background: var(--peer); color: var(--fg); padding: 10px 14px; }
-.report { background: transparent; color: var(--danger); padding: 10px 10px; }
+.leave { background: var(--primary); color: #fff; padding: 10px 14px; font-weight: 600; }
+.report { background: transparent; color: var(--danger); padding: 10px 10px; font-size: 18px; }
+.loctoggle { background: var(--peer); color: var(--sub); padding: 10px 10px; font-size: 13px; }
+.loctoggle.on { background: #2e7d4620; color: #2e9e5b; }
 
 .messages {
   flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
@@ -111,3 +113,23 @@ button { font: inherit; border: none; border-radius: 12px; padding: 14px 16px;
   touch-action: manipulation;
 }
 .photo-btn:active { filter: brightness(.94); }
+
+/* 신고 사유 모달 (하단 시트) */
+.modal { display: none; position: fixed; inset: 0; z-index: 50;
+         background: rgba(0,0,0,.45); align-items: flex-end; justify-content: center; }
+.modal.open { display: flex; animation: fade .15s ease; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.sheet {
+  background: var(--card); width: 100%; max-width: 440px;
+  border-radius: 18px 18px 0 0; padding: 20px;
+  padding-bottom: calc(20px + var(--safe-b));
+  animation: rise .2s ease;
+}
+@keyframes rise { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet h2 { margin: 0 0 4px; }
+.reasons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+.reason { background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+          font-size: 14px; padding: 14px 10px; }
+.reason:active { background: var(--peer); }
+.wide { width: 100%; }
+@media (max-width: 360px) { .reasons { grid-template-columns: 1fr; } }
