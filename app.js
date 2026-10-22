@@ -4,6 +4,33 @@
    - 비어 있으면 '데모 모드': 혼자서 화면 흐름과 UI만 확인. */
 
 const $ = (id) => document.getElementById(id);
+
+// ---- 테마 (다크/화이트 수동 전환) ----
+const THEME_KEY = "rc_theme";   // "dark" | "light" | null(시스템 따름)
+function systemDark() {
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function currentDark() {
+  const t = document.documentElement.getAttribute("data-theme");
+  return t ? t === "dark" : systemDark();
+}
+function applyTheme(theme) {
+  if (theme) document.documentElement.setAttribute("data-theme", theme);
+  else document.documentElement.removeAttribute("data-theme");
+  const btn = $("btn-theme");
+  if (btn) btn.textContent = currentDark() ? "☀️" : "🌙";
+}
+(function initTheme() {
+  let saved = null;
+  try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+  applyTheme(saved);
+})();
+$("btn-theme").addEventListener("click", () => {
+  const next = currentDark() ? "light" : "dark";
+  try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+  applyTheme(next);
+});
+
 const screens = ["consent", "ready", "waiting", "chat"];
 function show(name) {
   screens.forEach((s) => $("screen-" + s).classList.toggle("active", s === name));
@@ -28,6 +55,7 @@ function makeNick(region) {
 function refreshNick() {
   state.nick = makeNick(state.region);
   $("nick-preview").textContent = state.nick;
+  $("my-name").textContent = state.nick;
 }
 
 function savedLocChoice() {
@@ -88,7 +116,7 @@ function applyLocUI() {
     : "위치: 미정 · 대화 중 📍 버튼으로 켤 수 있어요";
   // 채팅 헤더 토글 버튼
   const t = $("btn-loc-toggle");
-  t.textContent = "📍 " + (state.locOn ? state.region : "미정");
+  t.textContent = "📍 " + (state.locOn ? state.region : "위치정보");
   t.classList.toggle("on", state.locOn);
 }
 
@@ -220,7 +248,7 @@ document.querySelectorAll(".reason").forEach((b) => {
     const reason = b.dataset.reason;
     closeReport();
     if (hasFirebase) firebaseReport(reason);
-    addSystem("신고가 접수되었습니다 (" + reason + "). 운영자가 확인합니다.");
+    addSystem("신고가 접수되었습니다.");
   });
 });
 

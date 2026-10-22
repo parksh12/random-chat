@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>랜덤채팅 (실험)</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <!-- 1단계: 이용 동의 -->
@@ -70,7 +70,7 @@
   <!-- 4단계: 채팅 -->
   <section id="screen-chat" class="screen">
     <header class="chat-head">
-      <span>상대: <b id="peer-name">—</b></span>
+      <span>나 <b id="my-name">—</b> · 상대 <b id="peer-name">—</b></span>
       <div>
         <button id="btn-loc-toggle" class="loctoggle" title="위치 사용 켜기/끄기">📍 미정</button>
         <button id="btn-report" class="report" title="신고">🚨</button>
@@ -106,7 +106,10 @@
     </div>
   </div>
 
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+  <!-- 테마 전환 (모든 화면 위에 떠 있음) -->
+  <button id="btn-theme" class="theme-toggle" title="다크/화이트 전환" aria-label="테마 전환">🌙</button>
+
+  <script src="config.js?v=3"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

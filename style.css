@@ -8,9 +8,16 @@
   --safe-l: env(safe-area-inset-left, 0px);
   --safe-r: env(safe-area-inset-right, 0px);
 }
+/* 다크 팔레트: 시스템이 다크일 때(사용자가 라이트로 고정하지 않았으면) + 수동 다크 선택 시 */
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #15171a; --card: #1e2126; --fg: #eceef1; --sub: #9aa1ab;
-          --line: #2c3036; --peer: #2a2e34; }
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --card: #1e2126; --fg: #eceef1; --sub: #9aa1ab;
+    --line: #2c3036; --peer: #2a2e34;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --card: #1e2126; --fg: #eceef1; --sub: #9aa1ab;
+  --line: #2c3036; --peer: #2a2e34;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
@@ -133,3 +140,15 @@ button { font: inherit; border: none; border-radius: 12px; padding: 14px 16px;
 .reason:active { background: var(--peer); }
 .wide { width: 100%; }
 @media (max-width: 360px) { .reasons { grid-template-columns: 1fr; } }
+
+/* 테마 전환 버튼 */
+.theme-toggle {
+  position: fixed; z-index: 60;
+  top: calc(10px + var(--safe-t)); right: calc(10px + var(--safe-r));
+  width: 42px; height: 42px; min-height: 42px; padding: 0;
+  border-radius: 50%; background: var(--card); border: 1px solid var(--line);
+  font-size: 18px; line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.theme-toggle:active { filter: brightness(.94); }
+/* 채팅 화면에서는 헤더와 겹치지 않게 숨김 */
+#screen-chat.active ~ .theme-toggle { display: none; }
