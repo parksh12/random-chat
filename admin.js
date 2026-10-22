@@ -137,6 +137,15 @@ function connectUser(peerUid, peerNick) {
   }).then(() => {
     db.ref("assign/" + peerUid).set({ roomId: roomId, forced: true, ts: now() });
     openResp(roomId, peerNick);
+    // 상대가 실제로 들어왔는지 확인해서 표시
+    const readyRef = db.ref("rooms/" + roomId + "/ready/" + peerUid);
+    let joined = false;
+    readyRef.on("value", (s) => {
+      if (s.val() === true) { joined = true; readyRef.off(); $("resp-peer").textContent = (peerNick || "이용자") + " · 연결됨"; }
+    });
+    setTimeout(() => {
+      if (!joined) { readyRef.off(); $("resp-peer").textContent = (peerNick || "이용자") + " · 접속 중이 아닐 수 있음"; }
+    }, 8000);
   });
 }
 

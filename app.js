@@ -302,7 +302,10 @@ function nextPartner() {
   closeReport();
   refreshNick();               // 새 상대에게는 새 대화명
   show("waiting");
-  startMatching();
+  // 동시에 나가면 매칭이 충돌하므로 짧은 랜덤 지연 후 재매칭 (시간차)
+  const delay = hasFirebase ? 150 + Math.floor(Math.random() * 700) : 0;
+  clearTimeout(state._rematchTimer);
+  state._rematchTimer = setTimeout(startMatching, delay);
 }
 
 // ---- 신고 사유 선택 ----
@@ -390,11 +393,21 @@ function waitForAssignment() {
   // 대기 중 연결이 끊기면 대기열에서 자동 제거. 방 배정은 전역 리스너가 처리.
   const wref = db.ref("waiting");
   wref.onDisconnect().remove();
-  // 하트비트: 내가 대기자인 동안 ts를 갱신해 '유령'으로 오인되지 않게
+  // 하트비트: 내가 대기자인 동안 ts를 갱신(유령 오인 방지) + 밀려났으면 재매칭(복구)
   clearInterval(state._waitBeat);
   state._waitBeat = setInterval(() => {
-    wref.transaction((cur) => (cur && cur.uid === uid ? { ...cur, ts: now() } : cur));
-  }, 8000);
+    wref.transaction(
+      (cur) => (cur && cur.uid === uid ? { ...cur, ts: now() } : cur),
+      (err, committed, snap) => {
+        if (state.roomId) return;                  // 이미 매칭됨
+        const v = snap && snap.val();
+        if (!v || v.uid !== uid) {                 // 대기열에서 밀려남 → 다시 시도
+          stopWaitBeat();
+          firebaseStartMatching();
+        }
+      }
+    );
+  }, 4000);
 }
 
 function stopWaitBeat() {
@@ -462,7 +475,7 @@ function joinRoom(roomId, peerNick) {
   state._closedRef = cref;
   cref.on("value", (snap) => {
     if (snap.val() === true && state.roomId === roomId) {
-      addSystem("상대가 대화를 종료했습니다. ‘다음 상대 ›’를 눌러 계속하세요.");
+      addSystem("상대방과의 연결이 끊어졌습니다.");
     }
   });
 }
