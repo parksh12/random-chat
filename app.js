@@ -365,7 +365,24 @@ function startRoomAsHost(peer) {
   };
   db.ref("rooms/" + roomId).set(room).then(() => {
     db.ref("assign/" + peer.uid).set({ roomId: roomId, ts: now() });
-    joinRoom(roomId, peer.nick);
+    // 상대가 실제로 방에 들어왔는지 확인 (유령 방지). 6초 내 안 오면 방 폐기 후 재매칭.
+    const readyRef = db.ref("rooms/" + roomId + "/ready/" + peer.uid);
+    let joined = false;
+    readyRef.on("value", (s) => {
+      if (s.val() === true && !joined) {
+        joined = true;
+        readyRef.off();
+        joinRoom(roomId, peer.nick);
+      }
+    });
+    setTimeout(() => {
+      if (!joined) {
+        readyRef.off();
+        db.ref("rooms/" + roomId).remove();
+        db.ref("assign/" + peer.uid).remove();
+        firebaseStartMatching();           // 유령이었으니 다시 매칭
+      }
+    }, 6000);
   });
 }
 
@@ -417,6 +434,7 @@ function attachAssignListener() {
 function joinRoom(roomId, peerNick) {
   stopWaitBeat();          // 매칭됐으니 대기 하트비트 중지
   state.roomId = roomId;
+  db.ref("rooms/" + roomId + "/ready/" + uid).set(true);  // 내가 실제로 들어왔음을 알림
   // 상대 uid 기억 (신고 대상 식별용)
   db.ref("rooms/" + roomId + "/members").once("value", (ms) => {
     const m = ms.val() || {};
