@@ -157,6 +157,12 @@ function refreshNick() {
   state.nick = makeNick(state.region);
   $("nick-preview").textContent = state.nick;
   $("my-name").textContent = state.nick;
+  // 대화 중이면 방의 내 정보도 갱신 → 상대 화면에 실시간 반영
+  if (hasFirebase && state.roomId && uid) {
+    db.ref("rooms/" + state.roomId + "/members/" + uid).update({
+      nick: state.nick, region: state.region,
+    });
+  }
 }
 
 function savedLocChoice() {
@@ -599,11 +605,21 @@ function joinRoom(roomId, peerNick, peerUid, peerProfile) {
       addSystem("상대방과의 연결이 끊어졌습니다.");
     }
   });
+
+  // 상대 닉네임 실시간 반영 (상대가 위치 켜고 끄며 닉네임 바뀌면 갱신)
+  if (peerUid) {
+    const nref = db.ref("rooms/" + roomId + "/members/" + peerUid + "/nick");
+    state._peerNickRef = nref;
+    nref.on("value", (snap) => {
+      if (snap.val() && state.roomId === roomId) $("peer-name").textContent = snap.val();
+    });
+  }
 }
 
 function detachRoom() {
   if (state._msgRef) { state._msgRef.off(); state._msgRef = null; }
   if (state._closedRef) { state._closedRef.off(); state._closedRef = null; }
+  if (state._peerNickRef) { state._peerNickRef.off(); state._peerNickRef = null; }
   if (state.roomId) { db.ref("rooms/" + state.roomId + "/closed").onDisconnect().cancel(); }
 }
 
