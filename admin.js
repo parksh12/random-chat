@@ -66,8 +66,10 @@ function watchAll() {
   // 실시간 접속 현황(익명 집계 — 숫자만)
   db.ref("presence").on("value", (snap) => {
     let online = 0, chatting = 0, waiting = 0;
+    const fresh = now() - 70000;   // 70초 내 갱신된 것만(끊긴 유령 제외)
     snap.forEach((ch) => {
       const v = ch.val() || {};
+      if ((v.ts || 0) < fresh) return;
       online++;
       if (v.state === "chatting") chatting++;
       else if (v.state === "waiting") waiting++;

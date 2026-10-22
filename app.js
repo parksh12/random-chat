@@ -72,6 +72,7 @@ if (hasFirebase) {
     console.error("익명 로그인 실패", e);
     alert("서버 연결에 실패했어요. 잠시 후 새로고침 해주세요.");
   });
+  setInterval(setPresence, 30000);   // 접속 상태 주기적 갱신(집계 정확도)
   // 운영자 공지 배너
   db.ref("config/notice").on("value", (s) => {
     const n = s.val();
@@ -418,24 +419,7 @@ function startRoomAsHost(peer) {
   };
   db.ref("rooms/" + roomId).set(room).then(() => {
     db.ref("assign/" + peer.uid).set({ roomId: roomId, ts: now() });
-    // 상대가 실제로 방에 들어왔는지 확인 (유령 방지). 6초 내 안 오면 방 폐기 후 재매칭.
-    const readyRef = db.ref("rooms/" + roomId + "/ready/" + peer.uid);
-    let joined = false;
-    readyRef.on("value", (s) => {
-      if (s.val() === true && !joined) {
-        joined = true;
-        readyRef.off();
-        joinRoom(roomId, peer.nick);
-      }
-    });
-    setTimeout(() => {
-      if (!joined) {
-        readyRef.off();
-        db.ref("rooms/" + roomId).remove();
-        db.ref("assign/" + peer.uid).remove();
-        firebaseStartMatching();           // 유령이었으니 다시 매칭
-      }
-    }, 6000);
+    joinRoom(roomId, peer.nick, peer.uid);   // 호스트는 바로 입장(같은 방 보장)
   });
 }
 
@@ -486,20 +470,26 @@ function attachAssignListener() {
       db.ref("waiting").onDisconnect().cancel();
       const m = room.members || {};
       const pk = Object.keys(m).find((k) => k !== uid);
-      joinRoom(v.roomId, pk ? m[pk].nick : "상대방");
+      joinRoom(v.roomId, pk ? m[pk].nick : "상대방", pk || null);
     });
   });
 }
 
-function joinRoom(roomId, peerNick) {
+function joinRoom(roomId, peerNick, peerUid) {
   stopWaitBeat();          // 매칭됐으니 대기 하트비트 중지
   state.roomId = roomId;
   db.ref("rooms/" + roomId + "/ready/" + uid).set(true);  // 내가 실제로 들어왔음을 알림
-  // 상대 uid 기억 (신고 대상 식별용)
-  db.ref("rooms/" + roomId + "/members").once("value", (ms) => {
-    const m = ms.val() || {};
-    state.peerUid = Object.keys(m).find((k) => k !== uid) || null;
-  });
+  // 상대 uid 기억 (신고 대상 식별용) — 넘겨받은 값 우선, 없으면 방에서 조회
+  if (peerUid) {
+    state.peerUid = peerUid;
+  } else {
+    db.ref("rooms/" + roomId + "/members").once("value", (ms) => {
+      const m = ms.val() || {};
+      state.peerUid = Object.keys(m).find((k) => k !== uid) || null;
+    });
+  }
+  if (state.nick && state.nick !== "미정0000") $("my-name").textContent = state.nick;
+  else refreshNick();      // 내 닉네임이 비어있으면 생성
   $("peer-name").textContent = peerNick || "상대방";
   enterChat();
   addSystem((peerNick || "상대방") + "님과 연결되었습니다.");
