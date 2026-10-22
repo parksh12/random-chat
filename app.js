@@ -338,22 +338,27 @@ function waitForAuth(cb, tries) {
 }
 
 function firebaseStartMatching() {
-  waitForAuth(() => {
-    let claimed = null;
-    const wref = db.ref("waiting");
-    wref.transaction((cur) => {
-      // 살아있는 대기자는 하트비트로 ts를 갱신하므로, 20초 넘게 오래된 것만 '유령'으로 간주
-      if (!cur || cur.uid === uid || now() - cur.ts > 20000) {
-        claimed = null;
-        return { uid: uid, nick: state.nick, region: state.region, ts: now() };
-      }
-      claimed = cur;
-      return null;           // 상대를 데려가고 대기열 비움
-    }, (err, committed) => {
-      if (err || !committed) { setTimeout(firebaseStartMatching, 500); return; }
-      if (claimed) startRoomAsHost(claimed);
-      else waitForAssignment();
-    });
+  // 동시에 눌러도 충돌하지 않도록 매 시도에 약간의 시간차(지터)
+  const jitter = Math.floor(Math.random() * 500);
+  setTimeout(() => waitForAuth(doMatch), jitter);
+}
+
+function doMatch() {
+  if (state.roomId) return;              // 이미 매칭됨
+  let claimed = null;
+  const wref = db.ref("waiting");
+  wref.transaction((cur) => {
+    // 살아있는 대기자는 하트비트로 ts를 갱신하므로, 20초 넘게 오래된 것만 '유령'으로 간주
+    if (!cur || cur.uid === uid || now() - cur.ts > 20000) {
+      claimed = null;
+      return { uid: uid, nick: state.nick, region: state.region, ts: now() };
+    }
+    claimed = cur;
+    return null;             // 상대를 데려가고 대기열 비움
+  }, (err, committed) => {
+    if (err || !committed) { setTimeout(firebaseStartMatching, 400); return; }
+    if (claimed) startRoomAsHost(claimed);
+    else waitForAssignment();
   });
 }
 
@@ -393,26 +398,23 @@ function waitForAssignment() {
   // 대기 중 연결이 끊기면 대기열에서 자동 제거. 방 배정은 전역 리스너가 처리.
   const wref = db.ref("waiting");
   wref.onDisconnect().remove();
-  // 하트비트: 내가 대기자인 동안 ts를 갱신(유령 오인 방지) + 밀려났으면 재매칭(복구)
+  // 하트비트: 내가 대기자인 동안 ts를 갱신(유령 오인 방지)
   clearInterval(state._waitBeat);
   state._waitBeat = setInterval(() => {
-    wref.transaction(
-      (cur) => (cur && cur.uid === uid ? { ...cur, ts: now() } : cur),
-      (err, committed, snap) => {
-        if (state.roomId) return;                  // 이미 매칭됨
-        const v = snap && snap.val();
-        if (!v || v.uid !== uid) {                 // 대기열에서 밀려남 → 다시 시도
-          stopWaitBeat();
-          firebaseStartMatching();
-        }
-      }
-    );
-  }, 4000);
+    wref.transaction((cur) => (cur && cur.uid === uid ? { ...cur, ts: now() } : cur));
+  }, 5000);
+  // 일정 시간 안에 매칭이 안 되면(밀려났거나 짝이 없으면) 다시 시도
+  clearTimeout(state._waitRetry);
+  state._waitRetry = setTimeout(() => {
+    if (!state.roomId) { stopWaitBeat(); firebaseStartMatching(); }
+  }, 7000);
 }
 
 function stopWaitBeat() {
   clearInterval(state._waitBeat);
   state._waitBeat = null;
+  clearTimeout(state._waitRetry);
+  state._waitRetry = null;
 }
 
 // 전역 배정 리스너: 일반 매칭과 관리자의 '특정인 지정'을 모두 처리.
