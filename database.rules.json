@@ -14,7 +14,7 @@
       ".indexOn": ["ts"]
     },
     "reports": {
-      ".read": false,
+      ".read": "auth != null && auth.uid === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33'",
       ".write": "auth != null",
       ".indexOn": ["ts"]
     }
