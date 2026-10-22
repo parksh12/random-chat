@@ -10,9 +10,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>랜덤채팅 (실험)</title>
-  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
+  <!-- 운영자 공지 배너 -->
+  <div id="notice-bar" style="display:none;position:fixed;top:0;left:0;right:0;z-index:80;
+    background:#3b66cf;color:#fff;padding:10px 14px;font-size:14px;text-align:center;
+    padding-top:calc(10px + env(safe-area-inset-top,0px))"></div>
+
   <!-- 1단계: 이용 동의 -->
   <section id="screen-consent" class="screen active">
     <div class="card">
@@ -130,7 +135,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="config.js?v=12"></script>
-  <script src="app.js?v=12"></script>
+  <script src="config.js?v=13"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>

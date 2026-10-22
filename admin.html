@@ -36,6 +36,17 @@
     .scard { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
     .scard .n { font-size:26px; font-weight:800; }
     .scard .t { color:var(--sub); font-size:13px; margin-top:2px; }
+    .scard.live .n { color:var(--ok); }
+    .cards { grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }
+    .section-title { font-size:13px; color:var(--sub); margin:4px 0 8px; font-weight:700; }
+    .notice-box { background:var(--card); border:1px solid var(--line); border-radius:12px;
+                  padding:14px; margin-bottom:16px; }
+    .notice-box textarea { width:100%; font:inherit; border-radius:8px; border:1px solid var(--line);
+                           background:var(--bg); color:var(--fg); padding:10px; resize:vertical; }
+    .statrow { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .statrow .bar { height:14px; background:var(--primary); border-radius:7px; min-width:3px; }
+    .statrow .lbl { width:120px; font-size:14px; }
+    .statrow .val { color:var(--sub); font-size:13px; }
 
     .tabs { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
     .tab { background:var(--line); color:var(--sub); }
@@ -77,20 +88,40 @@
       <button class="ghost" id="btn-logout">로그아웃</button>
     </header>
     <div class="wrap">
+      <div class="section-title">실시간 현황</div>
+      <div class="cards">
+        <div class="scard live"><div class="n" id="c-online">–</div><div class="t">총 접속자</div></div>
+        <div class="scard live"><div class="n" id="c-chatting">–</div><div class="t">대화 중</div></div>
+        <div class="scard live"><div class="n" id="c-waiting">–</div><div class="t">대기 중</div></div>
+      </div>
+      <div class="section-title">신고·차단</div>
       <div class="cards">
         <div class="scard"><div class="n" id="c-reports">–</div><div class="t">총 신고</div></div>
+        <div class="scard"><div class="n" id="c-today">–</div><div class="t">오늘 신고</div></div>
         <div class="scard"><div class="n" id="c-users">–</div><div class="t">신고된 이용자</div></div>
         <div class="scard"><div class="n" id="c-banned">–</div><div class="t">차단된 이용자</div></div>
-        <div class="scard"><div class="n" id="c-wait">–</div><div class="t">현재 대기</div></div>
+      </div>
+
+      <!-- 전체 공지 -->
+      <div class="notice-box">
+        <div class="section-title" style="margin-top:0">전체 공지 (모든 이용자 화면 상단에 표시)</div>
+        <textarea id="notice-text" rows="2" placeholder="공지 내용을 입력하세요 (비우고 삭제하면 배너가 사라집니다)"></textarea>
+        <div class="acts" style="margin-top:8px">
+          <button class="primary" id="btn-notice-save">공지 게시</button>
+          <button class="ghost" id="btn-notice-clear">공지 삭제</button>
+          <span class="muted" id="notice-status"></span>
+        </div>
       </div>
 
       <div class="tabs">
         <button class="tab active" data-tab="users">🚨 신고된 이용자</button>
         <button class="tab" data-tab="recent">🕑 최근 신고</button>
+        <button class="tab" data-tab="stats">📊 사유 통계</button>
         <button class="tab" data-tab="banned">🚫 차단 목록</button>
       </div>
       <div class="panel active" id="panel-users"></div>
       <div class="panel" id="panel-recent"></div>
+      <div class="panel" id="panel-stats"></div>
       <div class="panel" id="panel-banned"></div>
     </div>
   </div>
@@ -98,7 +129,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="config.js?v=12"></script>
-  <script src="admin.js?v=12"></script>
+  <script src="config.js?v=13"></script>
+  <script src="admin.js?v=13"></script>
 </body>
 </html>

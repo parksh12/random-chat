@@ -63,17 +63,65 @@ function watchAll() {
     renderSummary(); renderUsers(); renderRecent(); renderBanned();
   });
 
-  db.ref("waiting").on("value", (snap) => {
-    $("c-wait").textContent = snap.exists() ? "1" : "0";
+  // 실시간 접속 현황(익명 집계 — 숫자만)
+  db.ref("presence").on("value", (snap) => {
+    let online = 0, chatting = 0, waiting = 0;
+    snap.forEach((ch) => {
+      const v = ch.val() || {};
+      online++;
+      if (v.state === "chatting") chatting++;
+      else if (v.state === "waiting") waiting++;
+    });
+    $("c-online").textContent = online;
+    $("c-chatting").textContent = chatting;
+    $("c-waiting").textContent = waiting;
+  });
+
+  // 전체 공지
+  db.ref("config/notice").on("value", (snap) => {
+    const n = snap.val();
+    $("notice-text").value = n && n.text ? n.text : "";
+  });
+  $("btn-notice-save").addEventListener("click", () => {
+    const text = $("notice-text").value.trim();
+    db.ref("config/notice").set({ text: text, ts: now() })
+      .then(() => { $("notice-status").textContent = text ? "게시됨" : "삭제됨"; });
+  });
+  $("btn-notice-clear").addEventListener("click", () => {
+    $("notice-text").value = "";
+    db.ref("config/notice").remove().then(() => { $("notice-status").textContent = "삭제됨"; });
   });
 }
 
 // ---- 요약 ----
 function renderSummary() {
   const users = new Set(allReports.filter((r) => r.peerUid).map((r) => r.peerUid));
+  const dayAgo = now() - 24 * 60 * 60 * 1000;
   $("c-reports").textContent = allReports.length;
+  $("c-today").textContent = allReports.filter((r) => (r.ts || 0) >= dayAgo).length;
   $("c-users").textContent = users.size;
   $("c-banned").textContent = Object.keys(bannedSet).filter((k) => bannedSet[k]).length;
+  renderStats();
+}
+
+// 신고 사유별 통계 (막대)
+function renderStats() {
+  const box = $("panel-stats");
+  if (!box) return;
+  if (!allReports.length) { box.innerHTML = '<div class="empty">집계할 신고가 없어요.</div>'; return; }
+  const counts = {};
+  allReports.forEach((r) => { counts[r.reason || "기타"] = (counts[r.reason || "기타"] || 0) + 1; });
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const max = entries[0][1];
+  box.innerHTML = "";
+  entries.forEach(([reason, n]) => {
+    const row = document.createElement("div");
+    row.className = "statrow";
+    row.innerHTML = `<div class="lbl">${escapeHtml(reason)}</div>` +
+      `<div class="bar" style="width:${Math.round((n / max) * 220)}px"></div>` +
+      `<div class="val">${n}건</div>`;
+    box.appendChild(row);
+  });
 }
 
 // ---- 신고된 이용자별 묶음 ----

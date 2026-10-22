@@ -37,8 +37,19 @@ $("btn-theme").addEventListener("click", toggleTheme);
 $("btn-theme-chat").addEventListener("click", toggleTheme);
 
 const screens = ["consent", "ready", "waiting", "chat"];
+let currentScreen = "consent";
 function show(name) {
+  currentScreen = name;
   screens.forEach((s) => $("screen-" + s).classList.toggle("active", s === name));
+  setPresence();
+}
+
+// 접속 상태(익명 집계용): 화면 기준 idle/waiting/chatting
+function setPresence() {
+  if (!hasFirebase || !uid) return;
+  const st = currentScreen === "chat" ? "chatting"
+           : currentScreen === "waiting" ? "waiting" : "idle";
+  db.ref("presence/" + uid).set({ state: st, ts: now() });
 }
 
 const hasFirebase = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey);
@@ -49,10 +60,25 @@ if (hasFirebase) {
   firebase.initializeApp(window.FIREBASE_CONFIG);
   db = firebase.database();
   auth = firebase.auth();
-  auth.onAuthStateChanged((u) => { if (u) { uid = u.uid; attachAssignListener(); } });
+  auth.onAuthStateChanged((u) => {
+    if (u) {
+      uid = u.uid;
+      attachAssignListener();
+      db.ref("presence/" + uid).onDisconnect().remove();  // 접속 끊기면 자동 제거
+      setPresence();                                        // 현재 화면 기준 상태 기록
+    }
+  });
   auth.signInAnonymously().catch((e) => {
     console.error("익명 로그인 실패", e);
     alert("서버 연결에 실패했어요. 잠시 후 새로고침 해주세요.");
+  });
+  // 운영자 공지 배너
+  db.ref("config/notice").on("value", (s) => {
+    const n = s.val();
+    const bar = document.getElementById("notice-bar");
+    if (!bar) return;
+    if (n && n.text) { bar.textContent = "📢 " + n.text; bar.style.display = "block"; }
+    else { bar.style.display = "none"; }
   });
 }
 const now = () => Date.now();

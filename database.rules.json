@@ -28,6 +28,16 @@
       "$uid": {
         ".write": "auth != null && auth.uid === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33'"
       }
+    },
+    "presence": {
+      ".read": "auth != null && auth.uid === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33'",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "config": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.uid === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33'"
     }
   }
 }
