@@ -336,7 +336,6 @@ function waitForAuth(cb, tries) {
 
 function firebaseStartMatching() {
   waitForAuth(() => {
-    cleanupOld();            // 오래된 방·대기 정리(30분)
     let claimed = null;
     const wref = db.ref("waiting");
     wref.transaction((cur) => {
@@ -388,9 +387,10 @@ function attachAssignListener() {
       const room = rs.val();
       if (!room || room.closed) return;      // 이미 사라진/닫힌 방이면 무시
       if (state.roomId) {                    // 대화 중이면 현재 방 종료
-        db.ref("rooms/" + state.roomId + "/closed").set(true);
+        const old = state.roomId;
         detachRoom();
         state.roomId = null;
+        db.ref("rooms/" + old).remove();
       }
       db.ref("waiting").onDisconnect().cancel();
       const m = room.members || {};
@@ -411,6 +411,9 @@ function joinRoom(roomId, peerNick) {
   enterChat();
   addSystem((peerNick || "상대방") + "님과 연결되었습니다.");
 
+  // 내가 접속을 끊으면 이 방을 자동 삭제 (상대에게도 종료가 전달됨)
+  db.ref("rooms/" + roomId).onDisconnect().remove();
+
   // 메시지 수신
   const mref = db.ref("rooms/" + roomId + "/messages");
   state._msgRef = mref;
@@ -421,18 +424,20 @@ function joinRoom(roomId, peerNick) {
     else addMsg("peer", msg.text || "");
   });
 
-  // 상대가 나가면 알림
-  const cref = db.ref("rooms/" + roomId + "/closed");
-  state._closedRef = cref;
-  cref.on("value", (snap) => {
-    if (snap.val() === true) addSystem("상대가 대화를 종료했습니다. ‘다음 상대 ›’를 눌러 계속하세요.");
+  // 상대가 나가거나 접속이 끊겨 방이 사라지면 알림 (members가 없어지는 것으로 감지)
+  const memRef = db.ref("rooms/" + roomId + "/members");
+  state._memRef = memRef;
+  memRef.on("value", (snap) => {
+    if (snap.val() === null && state.roomId === roomId) {
+      addSystem("상대가 대화를 종료했습니다. ‘다음 상대 ›’를 눌러 계속하세요.");
+    }
   });
 }
 
 function detachRoom() {
   if (state._msgRef) { state._msgRef.off(); state._msgRef = null; }
-  if (state._closedRef) { state._closedRef.off(); state._closedRef = null; }
-  if (state._assignRef) { state._assignRef.off(); db.ref("assign/" + uid).remove(); state._assignRef = null; }
+  if (state._memRef) { state._memRef.off(); state._memRef = null; }
+  if (state.roomId) { db.ref("rooms/" + state.roomId).onDisconnect().cancel(); }
 }
 
 function firebaseCancelMatching() {
@@ -464,11 +469,10 @@ async function firebaseSendPhoto(file) {
 }
 
 function firebaseLeave() {
-  if (state.roomId) {
-    db.ref("rooms/" + state.roomId + "/closed").set(true);
-  }
-  detachRoom();
+  const rid = state.roomId;
+  detachRoom();            // 내 리스너 먼저 해제 (자기 알림 방지)
   state.roomId = null;
+  if (rid) db.ref("rooms/" + rid).remove();   // 방 삭제 → 상대에게 종료 전달 + 용량 정리
 }
 
 function firebaseReport(reason) {
