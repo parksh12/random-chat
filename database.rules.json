@@ -1,0 +1,22 @@
+{
+  "rules": {
+    "waiting": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "assign": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "rooms": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".indexOn": ["ts"]
+    },
+    "reports": {
+      ".read": false,
+      ".write": "auth != null",
+      ".indexOn": ["ts"]
+    }
+  }
+}

@@ -43,6 +43,21 @@ function show(name) {
 
 const hasFirebase = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey);
 
+// ---- Firebase 초기화 ----
+let db = null, auth = null, uid = null;
+if (hasFirebase) {
+  firebase.initializeApp(window.FIREBASE_CONFIG);
+  db = firebase.database();
+  auth = firebase.auth();
+  auth.onAuthStateChanged((u) => { if (u) uid = u.uid; });
+  auth.signInAnonymously().catch((e) => {
+    console.error("익명 로그인 실패", e);
+    alert("서버 연결에 실패했어요. 잠시 후 새로고침 해주세요.");
+  });
+}
+const now = () => Date.now();
+const ROOM_TTL = 30 * 60 * 1000;   // 30분
+
 // ---- 상태 ----
 const LOC_KEY = "rc_loc_choice";   // "on" | "off" | null(아직 선택 안 함)
 const state = {
@@ -307,14 +322,191 @@ document.querySelectorAll(".reason").forEach((b) => {
   });
 });
 
-// ---- Firebase 연동 (프로젝트 생성 후 구현 예정) ----
-function firebaseStartMatching() { console.warn("Firebase 매칭 미구현"); }
-function firebaseCancelMatching() {}
-function firebaseSendText(t) {}
-function firebaseSendPhoto(f) {}
-function firebaseLeave() {}
-function firebaseReport(reason) {}
-function firebaseUpdateRegion(region) {}
+// ================= Firebase 연동 =================
+// 방 구조: rooms/{roomId} = { members:{uid:{nick,region}}, ts, closed }
+//          rooms/{roomId}/messages/{key} = { sender, type, text|content, ts }
+// 매칭: waiting(한 명 대기) + assign/{uid}(대기자에게 방 배정 통지)
+
+function waitForAuth(cb, tries) {
+  tries = tries || 0;
+  if (uid) return cb();
+  if (tries > 100) { alert("서버 연결이 지연되고 있어요. 새로고침 해주세요."); show("ready"); return; }
+  setTimeout(() => waitForAuth(cb, tries + 1), 100);
+}
+
+function firebaseStartMatching() {
+  waitForAuth(() => {
+    cleanupOld();            // 오래된 방·대기 정리(30분)
+    let claimed = null;
+    const wref = db.ref("waiting");
+    wref.transaction((cur) => {
+      if (!cur || cur.uid === uid || now() - cur.ts > 30000) {
+        claimed = null;
+        return { uid: uid, nick: state.nick, region: state.region, ts: now() };
+      }
+      claimed = cur;
+      return null;           // 상대를 데려가고 대기열 비움
+    }, (err, committed) => {
+      if (err || !committed) { setTimeout(firebaseStartMatching, 500); return; }
+      if (claimed) startRoomAsHost(claimed);
+      else waitForAssignment();
+    });
+  });
+}
+
+function startRoomAsHost(peer) {
+  const roomId = db.ref("rooms").push().key;
+  const room = {
+    members: {
+      [uid]: { nick: state.nick, region: state.region },
+      [peer.uid]: { nick: peer.nick, region: peer.region || "미정" },
+    },
+    ts: now(), closed: false,
+  };
+  db.ref("rooms/" + roomId).set(room).then(() => {
+    db.ref("assign/" + peer.uid).set({ roomId: roomId, ts: now() });
+    joinRoom(roomId, peer.nick);
+  });
+}
+
+function waitForAssignment() {
+  // 대기 중 연결 끊기면 대기열에서 자동 제거
+  const wref = db.ref("waiting");
+  wref.onDisconnect().remove();
+  state._waitRef = wref;
+  const aref = db.ref("assign/" + uid);
+  state._assignRef = aref;
+  aref.on("value", (snap) => {
+    const v = snap.val();
+    if (v && v.roomId) {
+      aref.off();
+      aref.remove();
+      wref.onDisconnect().cancel();
+      db.ref("rooms/" + v.roomId + "/members").once("value", (ms) => {
+        const m = ms.val() || {};
+        const pk = Object.keys(m).find((k) => k !== uid);
+        joinRoom(v.roomId, pk ? m[pk].nick : "상대방");
+      });
+    }
+  });
+}
+
+function joinRoom(roomId, peerNick) {
+  state.roomId = roomId;
+  $("peer-name").textContent = peerNick || "상대방";
+  enterChat();
+  addSystem((peerNick || "상대방") + "님과 연결되었습니다.");
+
+  // 메시지 수신
+  const mref = db.ref("rooms/" + roomId + "/messages");
+  state._msgRef = mref;
+  mref.on("child_added", (snap) => {
+    const msg = snap.val();
+    if (!msg || msg.sender === uid) return;   // 내 메시지는 이미 표시됨
+    if (msg.type === "photo") addImage("peer", msg.content);
+    else addMsg("peer", msg.text || "");
+  });
+
+  // 상대가 나가면 알림
+  const cref = db.ref("rooms/" + roomId + "/closed");
+  state._closedRef = cref;
+  cref.on("value", (snap) => {
+    if (snap.val() === true) addSystem("상대가 대화를 종료했습니다. ‘다음 상대 ›’를 눌러 계속하세요.");
+  });
+}
+
+function detachRoom() {
+  if (state._msgRef) { state._msgRef.off(); state._msgRef = null; }
+  if (state._closedRef) { state._closedRef.off(); state._closedRef = null; }
+  if (state._assignRef) { state._assignRef.off(); db.ref("assign/" + uid).remove(); state._assignRef = null; }
+}
+
+function firebaseCancelMatching() {
+  // 대기열에서 나를 제거
+  const wref = db.ref("waiting");
+  wref.transaction((cur) => (cur && cur.uid === uid ? null : cur));
+  wref.onDisconnect().cancel();
+  detachRoom();
+}
+
+function firebaseSendText(text) {
+  if (!state.roomId) return;
+  db.ref("rooms/" + state.roomId + "/messages").push({
+    sender: uid, type: "text", text: text, ts: now(),
+  });
+}
+
+async function firebaseSendPhoto(file) {
+  if (!state.roomId) return;
+  try {
+    const dataUrl = await compressImage(file);
+    db.ref("rooms/" + state.roomId + "/messages").push({
+      sender: uid, type: "photo", content: dataUrl, ts: now(),
+    });
+  } catch (e) {
+    console.error("사진 전송 실패", e);
+    addSystem("사진 전송에 실패했어요.");
+  }
+}
+
+function firebaseLeave() {
+  if (state.roomId) {
+    db.ref("rooms/" + state.roomId + "/closed").set(true);
+  }
+  detachRoom();
+  state.roomId = null;
+}
+
+function firebaseReport(reason) {
+  const roomId = state.roomId;
+  const report = { reason: reason, reporter: uid, reporterNick: state.nick,
+                   peerNick: $("peer-name").textContent, roomId: roomId || null, ts: now() };
+  if (roomId) {
+    // 신고 시점의 대화 로그를 함께 저장 (운영자 확인용)
+    db.ref("rooms/" + roomId + "/messages").once("value", (snap) => {
+      report.log = snap.val() || null;
+      db.ref("reports").push(report);
+    });
+  } else {
+    db.ref("reports").push(report);
+  }
+}
+
+function firebaseUpdateRegion(region) {
+  if (state.roomId && uid) {
+    db.ref("rooms/" + state.roomId + "/members/" + uid + "/region").set(region);
+  }
+}
+
+// 이미지 압축 → data URL (긴 변 1024px, JPEG 품질 0.6)
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const max = 1024;
+      let { width: w, height: h } = img;
+      if (w > max || h > max) {
+        if (w >= h) { h = Math.round(h * max / w); w = max; }
+        else { w = Math.round(w * max / h); h = max; }
+      }
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL("image/jpeg", 0.6));
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// 30분 지난 방·배정 정리 (서버 없이 접속자가 조금씩 청소)
+function cleanupOld() {
+  const cutoff = now() - ROOM_TTL;
+  db.ref("rooms").orderByChild("ts").endAt(cutoff).once("value", (snap) => {
+    snap.forEach((ch) => { ch.ref.remove(); });
+  });
+}
 
 // 모바일 키보드 대응: 보이는 영역 높이를 채팅 화면에 반영
 function fitViewport() {
