@@ -339,7 +339,8 @@ function firebaseStartMatching() {
     let claimed = null;
     const wref = db.ref("waiting");
     wref.transaction((cur) => {
-      if (!cur || cur.uid === uid || now() - cur.ts > 30000) {
+      // 살아있는 대기자는 하트비트로 ts를 갱신하므로, 20초 넘게 오래된 것만 '유령'으로 간주
+      if (!cur || cur.uid === uid || now() - cur.ts > 20000) {
         claimed = null;
         return { uid: uid, nick: state.nick, region: state.region, ts: now() };
       }
@@ -370,7 +371,18 @@ function startRoomAsHost(peer) {
 
 function waitForAssignment() {
   // 대기 중 연결이 끊기면 대기열에서 자동 제거. 방 배정은 전역 리스너가 처리.
-  db.ref("waiting").onDisconnect().remove();
+  const wref = db.ref("waiting");
+  wref.onDisconnect().remove();
+  // 하트비트: 내가 대기자인 동안 ts를 갱신해 '유령'으로 오인되지 않게
+  clearInterval(state._waitBeat);
+  state._waitBeat = setInterval(() => {
+    wref.transaction((cur) => (cur && cur.uid === uid ? { ...cur, ts: now() } : cur));
+  }, 8000);
+}
+
+function stopWaitBeat() {
+  clearInterval(state._waitBeat);
+  state._waitBeat = null;
 }
 
 // 전역 배정 리스너: 일반 매칭과 관리자의 '특정인 지정'을 모두 처리.
@@ -386,12 +398,14 @@ function attachAssignListener() {
     db.ref("rooms/" + v.roomId).once("value", (rs) => {
       const room = rs.val();
       if (!room || room.closed) return;      // 이미 사라진/닫힌 방이면 무시
-      if (state.roomId) {                    // 대화 중이면 현재 방 종료
+      if (state.roomId) {                    // 대화 중이면 현재 방 종료(상대에게 알림)
         const old = state.roomId;
         detachRoom();
         state.roomId = null;
-        db.ref("rooms/" + old).remove();
+        db.ref("rooms/" + old + "/closed").set(true);
+        setTimeout(() => db.ref("rooms/" + old).remove(), 1500);
       }
+      stopWaitBeat();
       db.ref("waiting").onDisconnect().cancel();
       const m = room.members || {};
       const pk = Object.keys(m).find((k) => k !== uid);
@@ -401,6 +415,7 @@ function attachAssignListener() {
 }
 
 function joinRoom(roomId, peerNick) {
+  stopWaitBeat();          // 매칭됐으니 대기 하트비트 중지
   state.roomId = roomId;
   // 상대 uid 기억 (신고 대상 식별용)
   db.ref("rooms/" + roomId + "/members").once("value", (ms) => {
@@ -411,8 +426,8 @@ function joinRoom(roomId, peerNick) {
   enterChat();
   addSystem((peerNick || "상대방") + "님과 연결되었습니다.");
 
-  // 내가 접속을 끊으면 이 방을 자동 삭제 (상대에게도 종료가 전달됨)
-  db.ref("rooms/" + roomId).onDisconnect().remove();
+  // 내가 접속을 끊으면 상대에게 종료 신호 (삭제가 아니라 표시 → 상대가 읽을 수 있음)
+  db.ref("rooms/" + roomId + "/closed").onDisconnect().set(true);
 
   // 메시지 수신
   const mref = db.ref("rooms/" + roomId + "/messages");
@@ -424,11 +439,11 @@ function joinRoom(roomId, peerNick) {
     else addMsg("peer", msg.text || "");
   });
 
-  // 상대가 나가거나 접속이 끊겨 방이 사라지면 알림 (members가 없어지는 것으로 감지)
-  const memRef = db.ref("rooms/" + roomId + "/members");
-  state._memRef = memRef;
-  memRef.on("value", (snap) => {
-    if (snap.val() === null && state.roomId === roomId) {
+  // 상대가 나가면 알림 (closed 표시로 감지 — 방 삭제 전에 신호가 전달됨)
+  const cref = db.ref("rooms/" + roomId + "/closed");
+  state._closedRef = cref;
+  cref.on("value", (snap) => {
+    if (snap.val() === true && state.roomId === roomId) {
       addSystem("상대가 대화를 종료했습니다. ‘다음 상대 ›’를 눌러 계속하세요.");
     }
   });
@@ -436,11 +451,12 @@ function joinRoom(roomId, peerNick) {
 
 function detachRoom() {
   if (state._msgRef) { state._msgRef.off(); state._msgRef = null; }
-  if (state._memRef) { state._memRef.off(); state._memRef = null; }
-  if (state.roomId) { db.ref("rooms/" + state.roomId).onDisconnect().cancel(); }
+  if (state._closedRef) { state._closedRef.off(); state._closedRef = null; }
+  if (state.roomId) { db.ref("rooms/" + state.roomId + "/closed").onDisconnect().cancel(); }
 }
 
 function firebaseCancelMatching() {
+  stopWaitBeat();
   // 대기열에서 나를 제거
   const wref = db.ref("waiting");
   wref.transaction((cur) => (cur && cur.uid === uid ? null : cur));
@@ -472,7 +488,10 @@ function firebaseLeave() {
   const rid = state.roomId;
   detachRoom();            // 내 리스너 먼저 해제 (자기 알림 방지)
   state.roomId = null;
-  if (rid) db.ref("rooms/" + rid).remove();   // 방 삭제 → 상대에게 종료 전달 + 용량 정리
+  if (rid) {
+    db.ref("rooms/" + rid + "/closed").set(true);          // 상대에게 종료 전달
+    setTimeout(() => db.ref("rooms/" + rid).remove(), 1500); // 뒤이어 방 삭제(용량 정리)
+  }
 }
 
 function firebaseReport(reason) {
