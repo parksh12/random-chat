@@ -44,6 +44,34 @@ function show(name) {
   setPresence();
 }
 
+// 접속 카운터 + 앱 종료/백그라운드 시 정리
+let _counted = false;
+function presenceOn() {
+  if (!hasFirebase || !uid) return;
+  setPresence();
+  const cref = db.ref("stats/online");
+  const inc = firebase.database.ServerValue.increment;
+  cref.onDisconnect().set(inc(-1));        // 끊기면 -1 (재무장)
+  if (!_counted) { cref.set(inc(1)); _counted = true; }
+}
+function presenceOff() {
+  if (!hasFirebase || !uid) return;
+  try { db.ref("presence/" + uid).remove(); } catch (e) {}
+  const cref = db.ref("stats/online");
+  const inc = firebase.database.ServerValue.increment;
+  cref.onDisconnect().cancel();             // 중복 감소 방지
+  if (_counted) { cref.set(inc(-1)); _counted = false; }
+  // 대화 중이었으면 상대에게 종료 전달
+  if (state.roomId) { try { db.ref("rooms/" + state.roomId + "/closed").set(true); } catch (e) {} }
+}
+// 탭/앱을 완전히 닫을 때만 접속 종료 처리 (백그라운드는 유지)
+window.addEventListener("pagehide", (e) => { if (!e.persisted) presenceOff(); });
+window.addEventListener("beforeunload", presenceOff);
+// 백그라운드에서 돌아오면 상태만 갱신 (종료하지 않음)
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") presenceOn();
+});
+
 // 접속 상태(익명 집계용): 화면 기준 idle/waiting/chatting + 연령·성별
 function setPresence() {
   if (!hasFirebase || !uid) return;
@@ -69,12 +97,7 @@ if (hasFirebase) {
       uid = u.uid;
       attachAssignListener();
       db.ref("presence/" + uid).onDisconnect().remove();  // 접속 끊기면 자동 제거
-      setPresence();                                        // 현재 화면 기준 상태 기록
-      // 실시간 접속자 카운터(대략치): 접속 +1, 끊기면 -1
-      const inc = firebase.database.ServerValue.increment;
-      const cref = db.ref("stats/online");
-      cref.onDisconnect().set(inc(-1));
-      cref.set(inc(1));
+      presenceOn();
     }
   });
   auth.signInAnonymously().catch((e) => {
@@ -482,11 +505,17 @@ function waitForAssignment() {
   state._waitBeat = setInterval(() => {
     wref.transaction((cur) => (cur && cur.uid === uid ? { ...cur, ts: now() } : cur));
   }, 5000);
-  // 일정 시간 안에 매칭이 안 되면(밀려났거나 짝이 없으면) 다시 시도
+  // 일정 시간 안에 매칭이 안 되면 재시도. 단, 놓친 배정이 있으면 그걸 먼저 처리(멈춤 복구)
   clearTimeout(state._waitRetry);
-  state._waitRetry = setTimeout(() => {
-    if (!state.roomId) { stopWaitBeat(); firebaseStartMatching(); }
-  }, 7000);
+  state._waitRetry = setTimeout(function retry() {
+    if (state.roomId) return;
+    db.ref("assign/" + uid).once("value", (s) => {
+      if (state.roomId) return;
+      const v = s.val();
+      if (v && v.roomId) { consumeAssign(v); }       // 리스너가 놓친 배정 복구
+      else { stopWaitBeat(); firebaseStartMatching(); }
+    });
+  }, 6000);
 }
 
 function stopWaitBeat() {
@@ -502,28 +531,30 @@ let _assignAttached = false;
 function attachAssignListener() {
   if (_assignAttached || !uid) return;
   _assignAttached = true;
-  db.ref("assign/" + uid).on("value", (snap) => {
-    const v = snap.val();
-    if (!v || !v.roomId || v.roomId === state.roomId) return;
-    db.ref("assign/" + uid).remove();
-    db.ref("rooms/" + v.roomId).once("value", (rs) => {
-      const room = rs.val();
-      if (!room || room.closed) return;      // 이미 사라진/닫힌 방이면 무시
-      if (state.roomId) {                    // 대화 중이면 현재 방 종료(상대에게 알림)
-        const old = state.roomId;
-        detachRoom();
-        state.roomId = null;
-        db.ref("rooms/" + old + "/closed").set(true);
-        setTimeout(() => db.ref("rooms/" + old).remove(), 1500);
-      }
-      stopWaitBeat();
-      db.ref("waiting").onDisconnect().cancel();
-      const m = room.members || {};
-      const pk = Object.keys(m).find((k) => k !== uid);
-      const pm = pk ? m[pk] : null;
-      joinRoom(v.roomId, pm ? pm.nick : "상대방", pk || null,
-               pm ? profileText(pm.age, pm.gender) : "");
-    });
+  db.ref("assign/" + uid).on("value", (snap) => consumeAssign(snap.val()));
+}
+
+// 배정된 방으로 입장 (리스너·재시도 양쪽에서 사용 → 놓쳐도 복구됨)
+function consumeAssign(v) {
+  if (!v || !v.roomId || v.roomId === state.roomId) return;
+  db.ref("assign/" + uid).remove();
+  db.ref("rooms/" + v.roomId).once("value", (rs) => {
+    const room = rs.val();
+    if (!room || room.closed) return;      // 이미 사라진/닫힌 방이면 무시
+    if (state.roomId) {                    // 대화 중이면 현재 방 종료(상대에게 알림)
+      const old = state.roomId;
+      detachRoom();
+      state.roomId = null;
+      db.ref("rooms/" + old + "/closed").set(true);
+      setTimeout(() => db.ref("rooms/" + old).remove(), 1500);
+    }
+    stopWaitBeat();
+    db.ref("waiting").onDisconnect().cancel();
+    const m = room.members || {};
+    const pk = Object.keys(m).find((k) => k !== uid);
+    const pm = pk ? m[pk] : null;
+    joinRoom(v.roomId, pm ? pm.nick : "상대방", pk || null,
+             pm ? profileText(pm.age, pm.gender) : "");
   });
 }
 
