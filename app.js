@@ -92,6 +92,7 @@ function cancelMatching() {
 function enterChat() {
   $("messages").innerHTML = "";
   show("chat");
+  fitViewport();
 }
 
 // 메시지 그리기
@@ -155,6 +156,24 @@ function firebaseSendText(t) {}
 function firebaseSendPhoto(f) {}
 function firebaseLeave() {}
 function firebaseReport() {}
+
+// 모바일 키보드 대응: 보이는 영역 높이를 채팅 화면에 반영
+function fitViewport() {
+  const vv = window.visualViewport;
+  const h = vv ? vv.height : window.innerHeight;
+  const chat = $("screen-chat");
+  if (chat.classList.contains("active")) {
+    chat.style.height = h + "px";
+    $("messages").scrollTop = $("messages").scrollHeight;
+  }
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", fitViewport);
+  window.visualViewport.addEventListener("scroll", fitViewport);
+}
+window.addEventListener("resize", fitViewport);
+// 입력창을 누르면(키보드 등장) 잠시 뒤 맨 아래로 스크롤
+$("msg-input").addEventListener("focus", () => setTimeout(fitViewport, 300));
 
 // 시작
 show("consent");
