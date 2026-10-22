@@ -543,7 +543,7 @@ function joinRoom(roomId, peerNick, peerUid, peerProfile) {
   if (state.nick && state.nick !== "미정0000") $("my-name").textContent = state.nick;
   else refreshNick();      // 내 닉네임이 비어있으면 생성
   $("peer-name").textContent = peerNick || "상대방";
-  $("peer-profile").textContent = peerProfile || "";
+  $("peer-profile").textContent = "";   // 상대 연령·성별은 화면에 표시하지 않음(집계는 유지)
   enterChat();
   addSystem((peerNick || "상대방") + "님과 연결되었습니다.");
 
