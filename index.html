@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>랜덤채팅 (실험)</title>
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <!-- 1단계: 이용 동의 -->
@@ -72,6 +72,7 @@
     <header class="chat-head">
       <span>나 <b id="my-name">—</b> · 상대 <b id="peer-name">—</b></span>
       <div>
+        <button id="btn-theme-chat" class="loctoggle" title="다크/라이트 전환">다크</button>
         <button id="btn-loc-toggle" class="loctoggle" title="위치 사용 켜기/끄기">📍 미정</button>
         <button id="btn-report" class="report" title="신고">🚨</button>
         <button id="btn-leave" class="leave">다음 상대 ›</button>
@@ -106,10 +107,19 @@
     </div>
   </div>
 
-  <!-- 테마 전환 (모든 화면 위에 떠 있음) -->
-  <button id="btn-theme" class="theme-toggle" title="다크/화이트 전환" aria-label="테마 전환">🌙</button>
+  <!-- 사진 전체화면 뷰어 -->
+  <div id="photo-viewer" class="viewer">
+    <div class="viewer-bar">
+      <button id="btn-photo-save" class="viewer-btn">⬇ 저장</button>
+      <button id="btn-photo-close" class="viewer-btn">✕ 닫기</button>
+    </div>
+    <img id="viewer-img" alt="사진">
+  </div>
 
-  <script src="config.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <!-- 테마 전환 (모든 화면 위에 떠 있음) -->
+  <button id="btn-theme" class="theme-toggle" title="다크/화이트 전환" aria-label="테마 전환">다크</button>
+
+  <script src="config.js?v=4"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

@@ -17,19 +17,24 @@ function currentDark() {
 function applyTheme(theme) {
   if (theme) document.documentElement.setAttribute("data-theme", theme);
   else document.documentElement.removeAttribute("data-theme");
-  const btn = $("btn-theme");
-  if (btn) btn.textContent = currentDark() ? "☀️" : "🌙";
+  // 버튼에는 '눌렀을 때 바뀔 모드' 이름을 표시
+  const label = currentDark() ? "라이트" : "다크";
+  ["btn-theme", "btn-theme-chat"].forEach((id) => {
+    const b = $(id); if (b) b.textContent = label;
+  });
 }
 (function initTheme() {
   let saved = null;
   try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
   applyTheme(saved);
 })();
-$("btn-theme").addEventListener("click", () => {
+function toggleTheme() {
   const next = currentDark() ? "light" : "dark";
   try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
   applyTheme(next);
-});
+}
+$("btn-theme").addEventListener("click", toggleTheme);
+$("btn-theme-chat").addEventListener("click", toggleTheme);
 
 const screens = ["consent", "ready", "waiting", "chat"];
 function show(name) {
@@ -197,9 +202,44 @@ function addImage(kind, url) {
   el.className = "msg " + kind;
   const img = document.createElement("img");
   img.src = url;
+  img.addEventListener("click", () => openViewer(url));  // 눌러서 전체화면
   el.appendChild(img);
   $("messages").appendChild(el);
   $("messages").scrollTop = $("messages").scrollHeight;
+}
+
+// 사진 전체화면 뷰어
+function openViewer(url) {
+  $("viewer-img").src = url;
+  $("photo-viewer").dataset.url = url;
+  $("photo-viewer").classList.add("open");
+}
+function closeViewer() {
+  $("photo-viewer").classList.remove("open");
+  $("viewer-img").src = "";
+}
+$("btn-photo-close").addEventListener("click", closeViewer);
+$("btn-photo-save").addEventListener("click", savePhoto);
+async function savePhoto() {
+  const url = $("photo-viewer").dataset.url;
+  if (!url) return;
+  const name = "random-chat-" + Date.now() + ".jpg";
+  try {
+    // 이미지를 내려받아 blob으로 저장 (외부 URL도 강제 다운로드)
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } catch (e) {
+    // 실패 시 새 탭으로 열어 길게 눌러 저장하도록 안내
+    window.open(url, "_blank");
+    alert("자동 저장이 막혔어요. 열린 사진을 길게 눌러 저장하세요.");
+  }
 }
 function addSystem(text) { addMsg("sys", text); }
 
