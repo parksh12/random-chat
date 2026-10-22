@@ -1,7 +1,8 @@
 :root {
-  --bg: #f2f4f7; --card: #fff; --fg: #1a1d21; --sub: #6b7280;
-  --line: #e5e7eb; --primary: #3b66cf; --mine: #3b66cf; --peer: #e9ebef;
-  --danger: #d94848;
+  --bg: #eef1f6; --card: #fff; --fg: #1a1d21; --sub: #6b7280;
+  --line: #e5e7eb; --primary: #4f6ef2; --primary2: #7a5cf0; --mine: #4f6ef2; --peer: #e9ebef;
+  --danger: #e24b4b;
+  --grad: linear-gradient(135deg, #4f6ef2, #7a5cf0);
   /* 노치·홈바 안전 영역 */
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -11,23 +12,33 @@
 /* 다크 팔레트: 시스템이 다크일 때(사용자가 라이트로 고정하지 않았으면) + 수동 다크 선택 시 */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #15171a; --card: #1e2126; --fg: #eceef1; --sub: #9aa1ab;
+    --bg: #121418; --card: #1c1f25; --fg: #eceef1; --sub: #9aa1ab;
     --line: #2c3036; --peer: #2a2e34;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #15171a; --card: #1e2126; --fg: #eceef1; --sub: #9aa1ab;
+  --bg: #121418; --card: #1c1f25; --fg: #eceef1; --sub: #9aa1ab;
   --line: #2c3036; --peer: #2a2e34;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
 body {
   margin: 0; background: var(--bg); color: var(--fg);
-  font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  font-family: "Pretendard", "Pretendard Variable", -apple-system, "Apple SD Gothic Neo",
+               "Malgun Gothic", system-ui, sans-serif;
   -webkit-text-size-adjust: 100%;
   overscroll-behavior: none;              /* 당겨서 새로고침 방지 */
   text-rendering: optimizeLegibility;
+  letter-spacing: -0.01em;
 }
+
+/* 동의 화면 히어로(로고+태그라인) */
+.hero { text-align: center; margin-bottom: 18px; }
+.hero-logo { font-size: 32px; font-weight: 800; letter-spacing: -.5px; }
+.hero-logo .brand-num {
+  background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero-tag { color: var(--sub); font-size: 14px; margin-top: 4px; }
 
 /* 화면 전환 */
 .screen { display: none; }
@@ -39,8 +50,8 @@ body {
 }
 
 .card {
-  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-  padding: 22px; width: 100%; max-width: 440px; box-shadow: 0 6px 24px rgba(0,0,0,.06);
+  background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+  padding: 24px; width: 100%; max-width: 440px; box-shadow: 0 12px 40px rgba(20,30,60,.10);
 }
 .card.center { text-align: center; }
 h1 { font-size: 24px; margin: 0 0 16px; }
@@ -58,9 +69,10 @@ p { color: var(--sub); line-height: 1.5; margin: 8px 0; }
 /* 버튼 — 터치 영역 최소 48px */
 button { font: inherit; border: none; border-radius: 12px; padding: 14px 16px;
          cursor: pointer; min-height: 48px; touch-action: manipulation; }
-.primary { background: var(--primary); color: #fff; width: 100%; font-weight: 600; font-size: 16px; }
-.primary:active { filter: brightness(.94); }
-.primary:disabled { opacity: .45; cursor: not-allowed; }
+.primary { background: var(--grad); color: #fff; width: 100%; font-weight: 700; font-size: 16px;
+           box-shadow: 0 4px 14px rgba(79,110,242,.3); transition: transform .06s, filter .1s; }
+.primary:active { transform: translateY(1px); filter: brightness(.96); }
+.primary:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
 .secondary { background: var(--peer); color: var(--fg); }
 .secondary:active { filter: brightness(.94); }
 .row { display: flex; gap: 10px; align-items: center; margin: 14px 0; flex-wrap: wrap; }
@@ -68,9 +80,9 @@ button { font: inherit; border: none; border-radius: 12px; padding: 14px 16px;
 
 /* 대기 스피너 */
 .spinner {
-  width: 44px; height: 44px; margin: 8px auto 18px; border-radius: 50%;
+  width: 48px; height: 48px; margin: 8px auto 18px; border-radius: 50%;
   border: 4px solid var(--line); border-top-color: var(--primary);
-  animation: spin 1s linear infinite;
+  animation: spin .9s cubic-bezier(.5,.1,.5,.9) infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -101,7 +113,7 @@ button { font: inherit; border: none; border-radius: 12px; padding: 14px 16px;
 /* 사이트명 로고 */
 .brand { font-size: 18px; font-weight: 800; letter-spacing: -.3px; color: var(--fg); }
 .brand-num {
-  background: linear-gradient(90deg, #3b66cf, #6a8bff);
+  background: var(--grad);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .topbrand {
@@ -119,7 +131,7 @@ button { font: inherit; border: none; border-radius: 12px; padding: 14px 16px;
 }
 .msg { max-width: 80%; padding: 10px 13px; border-radius: 16px; line-height: 1.4;
        word-break: break-word; font-size: 16px; }
-.msg.mine { align-self: flex-end; background: var(--mine); color: #fff; border-bottom-right-radius: 4px; }
+.msg.mine { align-self: flex-end; background: var(--grad); color: #fff; border-bottom-right-radius: 4px; }
 .msg.peer { align-self: flex-start; background: var(--peer); color: var(--fg); border-bottom-left-radius: 4px; }
 .msg.sys { align-self: center; background: transparent; color: var(--sub); font-size: 13px; text-align: center; }
 .msg img { width: 160px; max-width: 60vw; height: 160px; max-height: 40vh;
