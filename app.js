@@ -44,12 +44,16 @@ function show(name) {
   setPresence();
 }
 
-// 접속 상태(익명 집계용): 화면 기준 idle/waiting/chatting
+// 접속 상태(익명 집계용): 화면 기준 idle/waiting/chatting + 연령·성별
 function setPresence() {
   if (!hasFirebase || !uid) return;
   const st = currentScreen === "chat" ? "chatting"
            : currentScreen === "waiting" ? "waiting" : "idle";
-  db.ref("presence/" + uid).set({ state: st, ts: now() });
+  db.ref("presence/" + uid).set({
+    state: st, ts: now(),
+    age: (state && state.age) || "미정",
+    gender: (state && state.gender) || "미정",
+  });
 }
 
 const hasFirebase = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey);
@@ -66,6 +70,11 @@ if (hasFirebase) {
       attachAssignListener();
       db.ref("presence/" + uid).onDisconnect().remove();  // 접속 끊기면 자동 제거
       setPresence();                                        // 현재 화면 기준 상태 기록
+      // 실시간 접속자 카운터(대략치): 접속 +1, 끊기면 -1
+      const inc = firebase.database.ServerValue.increment;
+      const cref = db.ref("stats/online");
+      cref.onDisconnect().set(inc(-1));
+      cref.set(inc(1));
     }
   });
   auth.signInAnonymously().catch((e) => {
@@ -73,6 +82,13 @@ if (hasFirebase) {
     alert("서버 연결에 실패했어요. 잠시 후 새로고침 해주세요.");
   });
   setInterval(setPresence, 30000);   // 접속 상태 주기적 갱신(집계 정확도)
+  // 홈 실시간 접속자 수 표시
+  db.ref("stats/online").on("value", (s) => {
+    const el = document.getElementById("hero-live");
+    if (!el) return;
+    const n = Math.max(0, s.val() || 0);
+    el.innerHTML = "🟢 현재 <b>" + n + "</b>명 접속 중";
+  });
   // 운영자 공지 배너
   db.ref("config/notice").on("value", (s) => {
     const n = s.val();
@@ -87,12 +103,27 @@ const ROOM_TTL = 30 * 60 * 1000;   // 30분
 
 // ---- 상태 ----
 const LOC_KEY = "rc_loc_choice";   // "on" | "off" | null(아직 선택 안 함)
+const AGE_KEY = "rc_age", GENDER_KEY = "rc_gender";
 const state = {
   region: "미정",
   nick: "미정0000",
   coords: null,
   locOn: false,
+  age: "미정",
+  gender: "미정",
 };
+try {
+  state.age = localStorage.getItem(AGE_KEY) || "미정";
+  state.gender = localStorage.getItem(GENDER_KEY) || "미정";
+} catch (e) {}
+
+// 상대 프로필 문구 (연령·성별)
+function profileText(age, gender) {
+  const parts = [];
+  if (age && age !== "미정") parts.push(age);
+  if (gender && gender !== "미정") parts.push(gender);
+  return parts.length ? "(" + parts.join("·") + ")" : "";
+}
 
 // 대화명: 지역 + 4자리 숫자
 function makeNick(region) {
@@ -176,6 +207,23 @@ $("btn-agree").addEventListener("click", () => {
   applyLocUI();
   show("ready");
 });
+
+// ---- 연령·성별 선택 칩 ----
+function setupChips(containerId, attr, key, cur) {
+  document.querySelectorAll("#" + containerId + " .chip").forEach((c) => {
+    c.classList.toggle("on", c.dataset[attr] === cur);
+    c.addEventListener("click", () => {
+      const val = c.dataset[attr];
+      state[attr] = val;
+      try { localStorage.setItem(key, val); } catch (e) {}
+      document.querySelectorAll("#" + containerId + " .chip").forEach((x) =>
+        x.classList.toggle("on", x === c));
+      setPresence();   // 집계에 반영
+    });
+  });
+}
+setupChips("age-chips", "age", AGE_KEY, state.age);
+setupChips("gender-chips", "gender", GENDER_KEY, state.gender);
 
 // ---- 2단계: 위치 / 입장 준비 ----
 $("btn-loc").addEventListener("click", enableLocation);
@@ -390,7 +438,8 @@ function doMatchInner() {
     // 살아있는 대기자는 하트비트로 ts를 갱신하므로, 20초 넘게 오래된 것만 '유령'으로 간주
     if (!cur || cur.uid === uid || now() - cur.ts > 20000) {
       claimed = null;
-      return { uid: uid, nick: state.nick, region: state.region, ts: now() };
+      return { uid: uid, nick: state.nick, region: state.region,
+               age: state.age, gender: state.gender, ts: now() };
     }
     claimed = cur;
     return null;             // 상대를 데려가고 대기열 비움
@@ -412,14 +461,15 @@ function startRoomAsHost(peer) {
   const roomId = db.ref("rooms").push().key;
   const room = {
     members: {
-      [uid]: { nick: state.nick, region: state.region },
-      [peer.uid]: { nick: peer.nick, region: peer.region || "미정" },
+      [uid]: { nick: state.nick, region: state.region, age: state.age, gender: state.gender },
+      [peer.uid]: { nick: peer.nick, region: peer.region || "미정",
+                    age: peer.age || "미정", gender: peer.gender || "미정" },
     },
     ts: now(), closed: false,
   };
   db.ref("rooms/" + roomId).set(room).then(() => {
     db.ref("assign/" + peer.uid).set({ roomId: roomId, ts: now() });
-    joinRoom(roomId, peer.nick, peer.uid);   // 호스트는 바로 입장(같은 방 보장)
+    joinRoom(roomId, peer.nick, peer.uid, profileText(peer.age, peer.gender));  // 호스트 바로 입장
   });
 }
 
@@ -470,12 +520,14 @@ function attachAssignListener() {
       db.ref("waiting").onDisconnect().cancel();
       const m = room.members || {};
       const pk = Object.keys(m).find((k) => k !== uid);
-      joinRoom(v.roomId, pk ? m[pk].nick : "상대방", pk || null);
+      const pm = pk ? m[pk] : null;
+      joinRoom(v.roomId, pm ? pm.nick : "상대방", pk || null,
+               pm ? profileText(pm.age, pm.gender) : "");
     });
   });
 }
 
-function joinRoom(roomId, peerNick, peerUid) {
+function joinRoom(roomId, peerNick, peerUid, peerProfile) {
   stopWaitBeat();          // 매칭됐으니 대기 하트비트 중지
   state.roomId = roomId;
   db.ref("rooms/" + roomId + "/ready/" + uid).set(true);  // 내가 실제로 들어왔음을 알림
@@ -491,6 +543,7 @@ function joinRoom(roomId, peerNick, peerUid) {
   if (state.nick && state.nick !== "미정0000") $("my-name").textContent = state.nick;
   else refreshNick();      // 내 닉네임이 비어있으면 생성
   $("peer-name").textContent = peerNick || "상대방";
+  $("peer-profile").textContent = peerProfile || "";
   enterChat();
   addSystem((peerNick || "상대방") + "님과 연결되었습니다.");
 

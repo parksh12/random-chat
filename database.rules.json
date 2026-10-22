@@ -38,6 +38,10 @@
     "config": {
       ".read": "auth != null",
       ".write": "auth != null && auth.uid === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33'"
+    },
+    "stats": {
+      ".read": "auth != null",
+      ".write": "auth != null"
     }
   }
 }

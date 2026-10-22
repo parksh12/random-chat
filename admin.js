@@ -66,6 +66,7 @@ function watchAll() {
   // 실시간 접속 현황(익명 집계 — 숫자만)
   db.ref("presence").on("value", (snap) => {
     let online = 0, chatting = 0, waiting = 0;
+    const byAge = {}, byGender = {};
     const fresh = now() - 70000;   // 70초 내 갱신된 것만(끊긴 유령 제외)
     snap.forEach((ch) => {
       const v = ch.val() || {};
@@ -73,10 +74,15 @@ function watchAll() {
       online++;
       if (v.state === "chatting") chatting++;
       else if (v.state === "waiting") waiting++;
+      const a = v.age || "미정", g = v.gender || "미정";
+      byAge[a] = (byAge[a] || 0) + 1;
+      byGender[g] = (byGender[g] || 0) + 1;
     });
     $("c-online").textContent = online;
     $("c-chatting").textContent = chatting;
     $("c-waiting").textContent = waiting;
+    renderBreakdown("bd-age", byAge, ["10대", "20대", "30대", "40대", "50대+", "미정"]);
+    renderBreakdown("bd-gender", byGender, ["남성", "여성", "미정"]);
   });
 
   // 전체 공지
@@ -259,6 +265,16 @@ function renderLog(r) {
     wrap.appendChild(b);
   });
   return wrap;
+}
+
+// 연령·성별 집계 표시
+function renderBreakdown(elId, counts, order) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const keys = order.filter((k) => counts[k]);
+  if (!keys.length) { el.innerHTML = '<span class="muted">접속 중인 이용자 없음</span>'; return; }
+  el.innerHTML = keys.map((k) =>
+    `<span class="bd-chip">${escapeHtml(k)} <b>${counts[k]}</b></span>`).join("");
 }
 
 function timeStr(ts) {

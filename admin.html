@@ -39,6 +39,13 @@
     .scard.live .n { color:var(--ok); }
     .cards { grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }
     .section-title { font-size:13px; color:var(--sub); margin:4px 0 8px; font-weight:700; }
+    .bd-wrap { background:var(--card); border:1px solid var(--line); border-radius:12px;
+               padding:12px 14px; margin-bottom:16px; }
+    .bd-title { font-size:13px; color:var(--sub); margin-right:8px; }
+    .bd-list { display:inline-flex; flex-wrap:wrap; gap:6px; vertical-align:middle; }
+    .bd-chip { background:var(--bg); border:1px solid var(--line); border-radius:999px;
+               padding:4px 10px; font-size:13px; }
+    .bd-chip b { color:var(--ok); }
     .notice-box { background:var(--card); border:1px solid var(--line); border-radius:12px;
                   padding:14px; margin-bottom:16px; }
     .notice-box textarea { width:100%; font:inherit; border-radius:8px; border:1px solid var(--line);
@@ -94,6 +101,10 @@
         <div class="scard live"><div class="n" id="c-chatting">–</div><div class="t">대화 중</div></div>
         <div class="scard live"><div class="n" id="c-waiting">–</div><div class="t">대기 중</div></div>
       </div>
+      <div class="bd-wrap">
+        <div><span class="bd-title">연령대</span> <span id="bd-age" class="bd-list"></span></div>
+        <div style="margin-top:8px"><span class="bd-title">성별</span> <span id="bd-gender" class="bd-list"></span></div>
+      </div>
       <div class="section-title">신고·차단</div>
       <div class="cards">
         <div class="scard"><div class="n" id="c-reports">–</div><div class="t">총 신고</div></div>
@@ -129,7 +140,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="config.js?v=14"></script>
-  <script src="admin.js?v=14"></script>
+  <script src="config.js?v=16"></script>
+  <script src="admin.js?v=16"></script>
 </body>
 </html>
