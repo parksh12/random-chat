@@ -48,13 +48,6 @@
     .cards { grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); }
     .section-title { font-size:12px; color:var(--sub); margin:6px 0 10px; font-weight:800;
                      letter-spacing:.3px; text-transform:uppercase; }
-    .bd-wrap { background:var(--card); border:1px solid var(--line); border-radius:12px;
-               padding:12px 14px; margin-bottom:16px; }
-    .bd-title { font-size:13px; color:var(--sub); margin-right:8px; }
-    .bd-list { display:inline-flex; flex-wrap:wrap; gap:6px; vertical-align:middle; }
-    .bd-chip { background:var(--bg); border:1px solid var(--line); border-radius:999px;
-               padding:4px 10px; font-size:13px; }
-    .bd-chip b { color:var(--ok); }
     .notice-box { background:var(--card); border:1px solid var(--line); border-radius:12px;
                   padding:14px; margin-bottom:16px; }
     .notice-box textarea { width:100%; font:inherit; border-radius:8px; border:1px solid var(--line);
@@ -126,11 +119,6 @@
         <div class="scard live"><div class="n" id="c-waiting">–</div><div class="t">대기 중</div></div>
         <div class="scard live"><div class="n" id="c-idle">–</div><div class="t">대기/둘러보는 중</div></div>
       </div>
-      <div class="bd-wrap">
-        <div><span class="bd-title">연령대</span> <span id="bd-age" class="bd-list"></span></div>
-        <div style="margin-top:8px"><span class="bd-title">성별</span> <span id="bd-gender" class="bd-list"></span></div>
-        <div style="margin-top:8px"><span class="bd-title">지역</span> <span id="bd-region" class="bd-list"></span></div>
-      </div>
       <div class="section-title">신고·차단</div>
       <div class="cards">
         <div class="scard alert"><div class="n" id="c-unresolved">–</div><div class="t">미처리 신고</div></div>
@@ -168,7 +156,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="config.js?v=39"></script>
-  <script src="admin.js?v=39"></script>
+  <script src="config.js?v=40"></script>
+  <script src="admin.js?v=40"></script>
 </body>
 </html>
