@@ -769,7 +769,7 @@ function joinRoom(roomId, peerNick, peerUid, peerProfile) {
   $("peer-profile").textContent = "";   // 상대 연령·성별은 화면에 표시하지 않음(집계는 유지)
   enterChat();
   addSystem((peerNick || "상대방") + "님과 연결되었습니다.");
-  addSystem("💡 프로젝트 아이디어를 자유롭게 나눠보세요");
+  addSystem("💡 자유롭게 대화를 나눠보세요.");
 
   // 내가 접속을 끊으면 상대에게 종료 신호 (삭제가 아니라 표시 → 상대가 읽을 수 있음)
   db.ref("rooms/" + roomId + "/closed").onDisconnect().set(true);
