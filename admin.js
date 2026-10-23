@@ -61,7 +61,7 @@ auth.onAuthStateChanged((u) => {
   if (u) {
     $("login").style.display = "none";
     $("main").style.display = "block";
-    $("whoami").textContent = (u.email || u.uid) + " · v47";
+    $("whoami").textContent = (u.email || u.uid) + " · v48";
     watchAll();
   } else {
     ["reports", "banned", "rooms", "presence", "config/notice"].forEach((p) => db.ref(p).off());
@@ -188,18 +188,25 @@ function renderUsers() {
     (groups[r.peerUid] = groups[r.peerUid] || { nick: r.peerNick, reports: [] }).reports.push(r);
   });
   const list = Object.entries(groups).sort((a, b) => b[1].reports.length - a[1].reports.length);
+  [...selUsers].forEach((id) => { if (!groups[id]) selUsers.delete(id); });
   if (!list.length) { box.innerHTML = '<div class="empty">신고된 이용자가 없어요.</div>'; return; }
   box.innerHTML = "";
+  const keysOf = (uids) => allReports.filter((r) => uids.includes(r.peerUid)).map((r) => r.key);
+  box.appendChild(selBar("신고된 이용자 " + list.length + "명", selUsers, list.map(([p]) => p), renderUsers,
+    () => deleteReports(keysOf([...selUsers]), "선택한 이용자 " + selUsers.size + "명의 신고",
+      () => selUsers.clear()),
+    () => deleteReports(keysOf(list.map(([p]) => p)), "모든 신고", () => selUsers.clear())));
   list.forEach(([puid, g]) => {
     const banned = bannedSet[puid] === true;
     const reasons = {};
     g.reports.forEach((r) => { reasons[r.reason] = (reasons[r.reason] || 0) + 1; });
     const item = document.createElement("div");
-    item.className = "item";
+    item.className = "item" + (selUsers.has(puid) ? " selected" : "");
     const row = document.createElement("div");
     row.className = "row";
-    const left = document.createElement("div");
-    left.innerHTML =
+    const left = selCheck(selUsers, puid, renderUsers);
+    const info = document.createElement("div"); left.appendChild(info);
+    info.innerHTML =
       `<div><b>${escapeHtml(g.nick || "이용자")}</b> ` +
       `<span class="tag cnt">신고 ${g.reports.length}회</span>` +
       (banned ? ' <span class="tag">차단됨</span>' : "") + `</div>` +
@@ -235,18 +242,67 @@ function renderUsers() {
   });
 }
 
+// ---- 신고 선택 삭제 (공통) ----
+const selUsers = new Set();     // 신고된 이용자 탭: peerUid
+const selReports = new Set();   // 최근 신고 탭: report key
+
+// 전체 선택 · 안내 · 선택 삭제 · 전체 삭제 바
+function selBar(infoText, sel, allIds, rerender, onDelSel, onDelAll) {
+  const bar = document.createElement("div"); bar.className = "selbar";
+  const lbl = document.createElement("label"); lbl.className = "chk";
+  const all = document.createElement("input"); all.type = "checkbox";
+  all.checked = sel.size > 0 && sel.size === allIds.length;
+  all.indeterminate = sel.size > 0 && sel.size < allIds.length;
+  all.addEventListener("change", () => {
+    if (all.checked) allIds.forEach((id) => sel.add(id)); else sel.clear();
+    rerender();
+  });
+  lbl.appendChild(all); lbl.appendChild(document.createTextNode(" 전체 선택"));
+  const info = document.createElement("span"); info.className = "muted"; info.textContent = infoText;
+  const bSel = document.createElement("button"); bSel.className = "danger";
+  bSel.textContent = "선택 삭제 (" + sel.size + ")"; bSel.disabled = sel.size === 0;
+  bSel.addEventListener("click", onDelSel);
+  const bAll = document.createElement("button"); bAll.className = "ghost";
+  bAll.textContent = "전체 삭제";
+  bAll.addEventListener("click", onDelAll);
+  [lbl, info, bSel, bAll].forEach((el) => bar.appendChild(el));
+  return bar;
+}
+// 항목 앞 체크박스 (label 안에 내용을 넣어 사용)
+function selCheck(sel, id, rerender) {
+  const lbl = document.createElement("label"); lbl.className = "chk";
+  const c = document.createElement("input"); c.type = "checkbox"; c.checked = sel.has(id);
+  c.addEventListener("change", () => { if (c.checked) sel.add(id); else sel.delete(id); rerender(); });
+  lbl.appendChild(c);
+  return lbl;
+}
+function deleteReports(keys, what, onDone) {
+  if (!keys.length) return;
+  if (!confirm(what + "(" + keys.length + "건)를 삭제할까요?\n삭제하면 되돌릴 수 없습니다.\n(차단 상태는 그대로 유지됩니다)")) return;
+  const upd = {};
+  keys.forEach((k) => { upd[k] = null; });
+  db.ref("reports").update(upd).then(onDone)
+    .catch((e) => alert("삭제 실패: " + (e.code || e.message)));
+}
+
 // ---- 최근 신고(평면) ----
 function renderRecent() {
   const box = $("panel-recent");
+  const keys = allReports.map((r) => r.key);
+  [...selReports].forEach((k) => { if (!keys.includes(k)) selReports.delete(k); });
   if (!allReports.length) { box.innerHTML = '<div class="empty">아직 신고가 없어요.</div>'; return; }
   box.innerHTML = "";
+  box.appendChild(selBar("신고 " + allReports.length + "건", selReports, keys, renderRecent,
+    () => deleteReports([...selReports], "선택한 신고 " + selReports.size + "건", () => selReports.clear()),
+    () => deleteReports(keys, "모든 신고", () => selReports.clear())));
   allReports.forEach((r) => {
     const item = document.createElement("div");
-    item.className = "item" + (r.resolved ? " resolved" : "");
+    item.className = "item" + (r.resolved ? " resolved" : "") + (selReports.has(r.key) ? " selected" : "");
     const row = document.createElement("div");
     row.className = "row";
-    const left = document.createElement("div");
-    left.innerHTML = `<span class="tag">${escapeHtml(r.reason || "기타")}</span>` +
+    const left = selCheck(selReports, r.key, renderRecent);
+    const info = document.createElement("div"); left.appendChild(info);
+    info.innerHTML = `<span class="tag">${escapeHtml(r.reason || "기타")}</span>` +
       (r.resolved ? ' <span class="tag ok">처리완료</span>' : "") +
       `<div class="muted" style="margin-top:6px">신고자 <b>${escapeHtml(r.reporterNick || "?")}</b> → 대상 <b>${escapeHtml(r.peerNick || "?")}</b><br>${timeStr(r.ts)}</div>`;
     const acts = document.createElement("div"); acts.className = "acts";
