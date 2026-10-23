@@ -307,10 +307,16 @@ function renderLogs(rooms) {
     o.selected = k === sortMode; sel.appendChild(o);
   });
   sel.addEventListener("change", () => { sortMode = sel.value; renderLogs(lastRooms); });
+  const btnOpen = document.createElement("button"); btnOpen.className = "ghost";
+  btnOpen.textContent = "모두 열기";
+  btnOpen.addEventListener("click", () => { rooms.forEach((r) => openRooms.add(r.id)); renderLogs(lastRooms); });
+  const btnClose = document.createElement("button"); btnClose.className = "ghost";
+  btnClose.textContent = "모두 닫기";
+  btnClose.addEventListener("click", () => { openRooms.clear(); renderLogs(lastRooms); });
   const btnDel = document.createElement("button"); btnDel.className = "danger";
   btnDel.textContent = "선택 삭제 (" + selectedRooms.size + ")";
   btnDel.disabled = selectedRooms.size === 0;
-  bar.appendChild(allLbl); bar.appendChild(info); bar.appendChild(sel); bar.appendChild(btnDel);
+  [allLbl, info, sel, btnOpen, btnClose, btnDel].forEach((el) => bar.appendChild(el));
   box.appendChild(bar);
   allChk.addEventListener("change", () => {
     if (allChk.checked) rooms.forEach((r) => selectedRooms.add(r.id));
