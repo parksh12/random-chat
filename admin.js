@@ -61,7 +61,7 @@ auth.onAuthStateChanged((u) => {
   if (u) {
     $("login").style.display = "none";
     $("main").style.display = "block";
-    $("whoami").textContent = (u.email || u.uid) + " · v46";
+    $("whoami").textContent = (u.email || u.uid) + " · v47";
     watchAll();
   } else {
     ["reports", "banned", "rooms", "presence", "config/notice"].forEach((p) => db.ref(p).off());
@@ -151,7 +151,6 @@ function watchAll() {
 function renderSummary() {
   const users = new Set(allReports.filter((r) => r.peerUid).map((r) => r.peerUid));
   const dayAgo = now() - 24 * 60 * 60 * 1000;
-  $("c-reports").textContent = allReports.length;
   $("c-today").textContent = allReports.filter((r) => (r.ts || 0) >= dayAgo).length;
   $("c-users").textContent = users.size;
   $("c-banned").textContent = Object.keys(bannedSet).filter((k) => bannedSet[k]).length;
