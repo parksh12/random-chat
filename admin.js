@@ -6,9 +6,10 @@
    보안: 신고(reports) 읽기는 관리자 UID만. 남의 대화방·전체 이용자 목록은 보지 않음(사생활 보호). */
 
 const $ = (id) => document.getElementById(id);
-firebase.initializeApp(window.FIREBASE_CONFIG);
-const auth = firebase.auth();
-const db = firebase.database();
+// 메인 사이트의 익명 로그인 세션과 섞이지 않도록 별도 이름의 앱(로그인 저장소 분리)
+const app = firebase.initializeApp(window.FIREBASE_CONFIG, "admin");
+const auth = app.auth();
+const db = app.database();
 const now = () => Date.now();
 
 let allReports = [];     // {key, ...report}
@@ -56,6 +57,7 @@ $("btn-logout").addEventListener("click", () => auth.signOut());
 $("btn-refresh").addEventListener("click", () => location.reload());
 
 auth.onAuthStateChanged((u) => {
+  if (u && u.isAnonymous) { auth.signOut(); return; }
   if (u) {
     $("login").style.display = "none";
     $("main").style.display = "block";
