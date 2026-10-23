@@ -47,9 +47,9 @@ function alertNewReport() {
   clearInterval(_titleTimer);
   let on = true, n = 0;
   _titleTimer = setInterval(() => {
-    document.title = on ? "🔴 새 신고!" : "파워닉스 · 관리자";
+    document.title = on ? "🔴 새 신고!" : "랜덤7942 · 관리자";
     on = !on;
-    if (++n > 8) { clearInterval(_titleTimer); document.title = "파워닉스 · 관리자"; }
+    if (++n > 8) { clearInterval(_titleTimer); document.title = "랜덤7942 · 관리자"; }
   }, 600);
 }
 $("btn-logout").addEventListener("click", () => auth.signOut());
@@ -273,29 +273,87 @@ function renderRecent() {
 }
 
 // ---- 브레인스토밍 대화 로그 ----
+// 실시간 갱신으로 다시 그려져도 선택·펼침 상태 유지
+const selectedRooms = new Set();
+const openRooms = new Set();
+let lastRooms = [];
+
 function renderLogs(rooms) {
+  lastRooms = rooms;
   const box = $("panel-logs");
+  const ids = new Set(rooms.map((r) => r.id));
+  [...selectedRooms].forEach((id) => { if (!ids.has(id)) selectedRooms.delete(id); });
   if (!rooms.length) { box.innerHTML = '<div class="empty">아직 대화가 없어요.</div>'; return; }
   const totalMsgs = rooms.reduce((a, r) => a + (r.messages ? Object.keys(r.messages).length : 0), 0);
-  box.innerHTML = '<div class="muted" style="margin-bottom:10px">총 ' + rooms.length +
-    '개 대화 · 메시지 ' + totalMsgs + '개 · 최신순</div>';
+  box.innerHTML = "";
+
+  // 선택 삭제 바
+  const bar = document.createElement("div"); bar.className = "selbar";
+  const allLbl = document.createElement("label"); allLbl.className = "chk";
+  const allChk = document.createElement("input"); allChk.type = "checkbox";
+  allChk.checked = selectedRooms.size === rooms.length;
+  allChk.indeterminate = selectedRooms.size > 0 && selectedRooms.size < rooms.length;
+  allLbl.appendChild(allChk);
+  allLbl.appendChild(document.createTextNode(" 전체 선택"));
+  const info = document.createElement("span"); info.className = "muted";
+  info.textContent = "총 " + rooms.length + "개 대화 · 메시지 " + totalMsgs + "개 · 최신순";
+  const btnDel = document.createElement("button"); btnDel.className = "danger";
+  btnDel.textContent = "선택 삭제 (" + selectedRooms.size + ")";
+  btnDel.disabled = selectedRooms.size === 0;
+  bar.appendChild(allLbl); bar.appendChild(info); bar.appendChild(btnDel);
+  box.appendChild(bar);
+  allChk.addEventListener("change", () => {
+    if (allChk.checked) rooms.forEach((r) => selectedRooms.add(r.id));
+    else selectedRooms.clear();
+    renderLogs(lastRooms);
+  });
+  btnDel.addEventListener("click", deleteSelectedRooms);
+
   rooms.forEach((r) => {
     const members = r.members || {};
     const nicks = Object.values(members).map((m) => m.nick || "익명");
     const msgs = r.messages ? Object.values(r.messages) : [];
-    const item = document.createElement("div"); item.className = "item";
+    const item = document.createElement("div");
+    item.className = "item" + (selectedRooms.has(r.id) ? " selected" : "");
     const row = document.createElement("div"); row.className = "row";
-    const left = document.createElement("div");
-    left.innerHTML = "<b>" + nicks.map(escapeHtml).join(" ↔ ") + "</b>" +
+    const left = document.createElement("label"); left.className = "chk";
+    const chk = document.createElement("input"); chk.type = "checkbox";
+    chk.checked = selectedRooms.has(r.id);
+    const meta = document.createElement("div");
+    meta.innerHTML = "<b>" + nicks.map(escapeHtml).join(" ↔ ") + "</b>" +
       '<div class="muted" style="margin-top:4px">' + timeStr(r.ts) + " · 메시지 " + msgs.length +
       "개 · " + (r.closed ? "종료됨" : "진행 중") + "</div>";
+    left.appendChild(chk); left.appendChild(meta);
     const btn = document.createElement("button"); btn.className = "ghost"; btn.textContent = "대화 보기";
     row.appendChild(left); row.appendChild(btn); item.appendChild(row);
-    const log = document.createElement("div"); log.className = "log";
+    const log = document.createElement("div");
+    log.className = "log" + (openRooms.has(r.id) ? " open" : "");
     log.appendChild(renderRoomMsgs(members, msgs));
     item.appendChild(log);
-    btn.addEventListener("click", () => log.classList.toggle("open"));
+    chk.addEventListener("change", () => {
+      if (chk.checked) selectedRooms.add(r.id); else selectedRooms.delete(r.id);
+      renderLogs(lastRooms);
+    });
+    btn.addEventListener("click", () => {
+      if (log.classList.toggle("open")) openRooms.add(r.id); else openRooms.delete(r.id);
+    });
     box.appendChild(item);
+  });
+}
+
+function deleteSelectedRooms() {
+  const ids = [...selectedRooms];
+  if (!ids.length) return;
+  const live = lastRooms.filter((r) => selectedRooms.has(r.id) && !r.closed).length;
+  let msg = "선택한 대화 " + ids.length + "개를 삭제할까요?\n삭제하면 되돌릴 수 없습니다.";
+  if (live) msg += "\n\n⚠ 이 중 " + live + "개는 아직 진행 중인 대화입니다.";
+  if (!confirm(msg)) return;
+  const upd = {};
+  ids.forEach((id) => { upd[id] = null; });
+  db.ref("rooms").update(upd).then(() => {
+    ids.forEach((id) => { selectedRooms.delete(id); openRooms.delete(id); });
+  }).catch((e) => {
+    alert("삭제 실패: " + (e.code || e.message) + "\n보안 규칙에 관리자 삭제 권한이 있는지 확인하세요.");
   });
 }
 function renderRoomMsgs(members, msgs) {
