@@ -82,6 +82,7 @@ function setPresence() {
     state: st, ts: now(),
     age: (state && state.age) || "미정",
     gender: (state && state.gender) || "미정",
+    region: (state && state.region) || "미정",
   });
 }
 

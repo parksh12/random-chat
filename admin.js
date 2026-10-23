@@ -98,8 +98,8 @@ function watchAll() {
 
   // 실시간 접속 현황(익명 집계 — 숫자만)
   db.ref("presence").on("value", (snap) => {
-    let online = 0, chatting = 0, waiting = 0;
-    const byAge = {}, byGender = {};
+    let online = 0, chatting = 0, waiting = 0, idle = 0;
+    const byAge = {}, byGender = {}, byRegion = {};
     const fresh = now() - 70000;   // 70초 내 갱신된 것만(끊긴 유령 제외)
     snap.forEach((ch) => {
       const v = ch.val() || {};
@@ -107,15 +107,21 @@ function watchAll() {
       online++;
       if (v.state === "chatting") chatting++;
       else if (v.state === "waiting") waiting++;
-      const a = v.age || "미정", g = v.gender || "미정";
+      else idle++;
+      const a = v.age || "미정", g = v.gender || "미정", r = v.region || "미정";
       byAge[a] = (byAge[a] || 0) + 1;
       byGender[g] = (byGender[g] || 0) + 1;
+      byRegion[r] = (byRegion[r] || 0) + 1;
     });
     $("c-online").textContent = online;
     $("c-chatting").textContent = chatting;
     $("c-waiting").textContent = waiting;
+    if ($("c-idle")) $("c-idle").textContent = idle;
+    if ($("c-rooms")) $("c-rooms").textContent = Math.floor(chatting / 2);  // 진행 중 대화(추정)
     renderBreakdown("bd-age", byAge, ["10대", "20대", "30대", "40대", "50대+", "미정"]);
     renderBreakdown("bd-gender", byGender, ["남성", "여성", "미정"]);
+    const regionOrder = Object.keys(byRegion).sort((a, b) => byRegion[b] - byRegion[a]);
+    renderBreakdown("bd-region", byRegion, regionOrder);
   });
 
   // 전체 공지
