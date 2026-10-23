@@ -100,7 +100,6 @@ function watchAll() {
   db.ref("rooms").on("value", (snap) => {
     const rooms = [];
     snap.forEach((ch) => { rooms.push({ id: ch.key, ...(ch.val() || {}) }); });
-    rooms.sort((a, b) => (b.ts || 0) - (a.ts || 0));
     renderLogs(rooms);
   }, (err) => {
     $("panel-logs").innerHTML = '<div class="empty">로그 읽기 권한 없음 (' + (err.code || "") + ")</div>";
@@ -268,8 +267,22 @@ function renderRecent() {
 const selectedRooms = new Set();
 const openRooms = new Set();
 let lastRooms = [];
+let sortMode = "new";
+
+const msgCount = (r) => (r.messages ? Object.keys(r.messages).length : 0);
+function duration(r) {   // 첫 메시지 ~ 마지막 메시지 시간
+  const ts = r.messages ? Object.values(r.messages).map((m) => m.ts || 0) : [];
+  return ts.length ? Math.max(...ts) - Math.min(...ts) : 0;
+}
+const SORTS = {
+  new:  { label: "최신순",         fn: (a, b) => (b.ts || 0) - (a.ts || 0) },
+  old:  { label: "오래된순",       fn: (a, b) => (a.ts || 0) - (b.ts || 0) },
+  msgs: { label: "메시지 많은순",  fn: (a, b) => msgCount(b) - msgCount(a) || (b.ts || 0) - (a.ts || 0) },
+  dur:  { label: "대화 시간 긴순", fn: (a, b) => duration(b) - duration(a) || (b.ts || 0) - (a.ts || 0) },
+};
 
 function renderLogs(rooms) {
+  rooms = rooms.slice().sort(SORTS[sortMode].fn);
   lastRooms = rooms;
   const box = $("panel-logs");
   const ids = new Set(rooms.map((r) => r.id));
@@ -287,11 +300,17 @@ function renderLogs(rooms) {
   allLbl.appendChild(allChk);
   allLbl.appendChild(document.createTextNode(" 전체 선택"));
   const info = document.createElement("span"); info.className = "muted";
-  info.textContent = "총 " + rooms.length + "개 대화 · 메시지 " + totalMsgs + "개 · 최신순";
+  info.textContent = "총 " + rooms.length + "개 대화 · 메시지 " + totalMsgs + "개";
+  const sel = document.createElement("select");
+  Object.entries(SORTS).forEach(([k, s]) => {
+    const o = document.createElement("option"); o.value = k; o.textContent = s.label;
+    o.selected = k === sortMode; sel.appendChild(o);
+  });
+  sel.addEventListener("change", () => { sortMode = sel.value; renderLogs(lastRooms); });
   const btnDel = document.createElement("button"); btnDel.className = "danger";
   btnDel.textContent = "선택 삭제 (" + selectedRooms.size + ")";
   btnDel.disabled = selectedRooms.size === 0;
-  bar.appendChild(allLbl); bar.appendChild(info); bar.appendChild(btnDel);
+  bar.appendChild(allLbl); bar.appendChild(info); bar.appendChild(sel); bar.appendChild(btnDel);
   box.appendChild(bar);
   allChk.addEventListener("change", () => {
     if (allChk.checked) rooms.forEach((r) => selectedRooms.add(r.id));
@@ -313,7 +332,7 @@ function renderLogs(rooms) {
     const meta = document.createElement("div");
     meta.innerHTML = "<b>" + nicks.map(escapeHtml).join(" ↔ ") + "</b>" +
       '<div class="muted" style="margin-top:4px">' + timeStr(r.ts) + " · 메시지 " + msgs.length +
-      "개 · " + (r.closed ? "종료됨" : "진행 중") + "</div>";
+      "개 · " + durStr(duration(r)) + " · " + (r.closed ? "종료됨" : "진행 중") + "</div>";
     left.appendChild(chk); left.appendChild(meta);
     const btn = document.createElement("button"); btn.className = "ghost"; btn.textContent = "대화 보기";
     row.appendChild(left); row.appendChild(btn); item.appendChild(row);
@@ -425,6 +444,10 @@ function renderLog(r) {
   return wrap;
 }
 
+function durStr(ms) {
+  const m = Math.round(ms / 60000);
+  return m < 1 ? "1분 미만" : m < 60 ? m + "분" : Math.floor(m / 60) + "시간 " + (m % 60) + "분";
+}
 function timeStr(ts) {
   const d = new Date(ts || 0);
   const p = (n) => String(n).padStart(2, "0");
