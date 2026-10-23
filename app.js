@@ -37,8 +37,8 @@ function toggleTheme() {
   const b = $(id); if (b) b.addEventListener("click", toggleTheme);
 });
 
-const screens = ["consent", "ready", "waiting", "chat"];
-let currentScreen = "consent";
+const screens = ["gate", "consent", "ready", "waiting", "chat"];
+let currentScreen = "gate";
 function show(name) {
   currentScreen = name;
   screens.forEach((s) => $("screen-" + s).classList.toggle("active", s === name));
@@ -240,6 +240,24 @@ function applyLocUI() {
   t.textContent = state.locOn ? state.region : "위치";
   t.classList.toggle("on", state.locOn);
 }
+
+// ---- 0단계: 베타 비밀번호 게이트 ----
+const BETA_PW = "1234";
+const BETA_KEY = "rc_beta_ok";
+function betaUnlocked() {
+  try { return localStorage.getItem(BETA_KEY) === "1"; } catch (e) { return false; }
+}
+function tryGate() {
+  if ($("gate-pw").value === BETA_PW) {
+    try { localStorage.setItem(BETA_KEY, "1"); } catch (e) {}
+    show("consent");
+  } else {
+    $("gate-msg").textContent = "비밀번호가 올바르지 않습니다.";
+    $("gate-pw").value = "";
+  }
+}
+$("btn-gate").addEventListener("click", tryGate);
+$("gate-pw").addEventListener("keydown", (e) => { if (e.key === "Enter") tryGate(); });
 
 // ---- 1단계: 동의 ----
 $("agree-check").addEventListener("change", (e) => {
@@ -960,6 +978,6 @@ document.querySelectorAll(".hero-logo, .topbrand").forEach((el) =>
   el.addEventListener("click", toggleBrand));
 applyBrandHidden();
 
-// 시작
-show("consent");
+// 시작: 베타 비번 통과했으면 동의 화면부터, 아니면 비번 게이트부터
+show(betaUnlocked() ? "consent" : "gate");
 if (!hasFirebase) console.info("데모 모드: Firebase 설정이 비어 있습니다. config.js를 채우면 실제로 동작합니다.");
