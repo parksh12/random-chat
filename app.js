@@ -106,12 +106,13 @@ if (hasFirebase) {
     alert("서버 연결에 실패했어요. 잠시 후 새로고침 해주세요.");
   });
   setInterval(setPresence, 30000);   // 접속 상태 주기적 갱신(집계 정확도)
-  // 홈 실시간 접속자 수 표시
+  // 실시간 접속자 수 표시 (홈 + 대기 화면)
   db.ref("stats/online").on("value", (s) => {
-    const el = document.getElementById("hero-live");
-    if (!el) return;
     const n = Math.max(0, s.val() || 0);
-    el.innerHTML = "🟢 현재 <b>" + n + "</b>명 접속 중";
+    const hero = document.getElementById("hero-live");
+    if (hero) hero.innerHTML = "🟢 현재 <b>" + n + "</b>명 접속 중";
+    const wc = document.getElementById("wait-count");
+    if (wc) wc.innerHTML = "현재 <b>" + n + "</b>명이 함께 있어요";
   });
   // 운영자 공지 배너
   db.ref("config/notice").on("value", (s) => {
@@ -289,6 +290,7 @@ async function regionFromCoords(c) {
 }
 
 $("btn-start").addEventListener("click", () => {
+  initAudio();        // 사용자 제스처로 알림음 잠금 해제
   show("waiting");
   startMatching();
 });
@@ -321,23 +323,44 @@ function enterChat() {
   fitViewport();
 }
 
-// 메시지 그리기
-function addMsg(kind, text) {
-  const el = document.createElement("div");
-  el.className = "msg " + kind;
-  el.textContent = text;
-  $("messages").appendChild(el);
-  $("messages").scrollTop = $("messages").scrollHeight;
+// 메시지 그리기 (말풍선 + 시간). 반환: 말풍선 요소
+function timeLabel(ts) {
+  const d = new Date(ts || now());
+  const p = (n) => String(n).padStart(2, "0");
+  return p(d.getHours()) + ":" + p(d.getMinutes());
 }
-function addImage(kind, url) {
-  const el = document.createElement("div");
-  el.className = "msg " + kind;
+function addBubble(kind, content, ts) {
+  const row = document.createElement("div");
+  row.className = "msg-row " + kind;
+  const bubble = document.createElement("div");
+  bubble.className = "msg " + kind;
+  if (typeof content === "string") bubble.textContent = content;
+  else bubble.appendChild(content);
+  const t = document.createElement("span");
+  t.className = "time"; t.textContent = timeLabel(ts);
+  if (kind === "mine") { row.appendChild(t); row.appendChild(bubble); }
+  else { row.appendChild(bubble); row.appendChild(t); }
+  const box = $("messages");
+  const typing = document.getElementById("typing-row");
+  if (typing) box.insertBefore(row, typing); else box.appendChild(row);  // 입력중 표시 위에
+  box.scrollTop = box.scrollHeight;
+  return bubble;
+}
+function addMsg(kind, text, ts) {
+  if (kind === "sys") {
+    const el = document.createElement("div");
+    el.className = "msg sys"; el.textContent = text;
+    $("messages").appendChild(el);
+    $("messages").scrollTop = $("messages").scrollHeight;
+    return el;
+  }
+  return addBubble(kind, text, ts);
+}
+function addImage(kind, url, ts) {
   const img = document.createElement("img");
   img.src = url;
   img.addEventListener("click", () => openViewer(url));  // 눌러서 전체화면
-  el.appendChild(img);
-  $("messages").appendChild(el);
-  $("messages").scrollTop = $("messages").scrollHeight;
+  return addBubble(kind, img, ts);
 }
 
 // 사진 전체화면 뷰어
@@ -389,15 +412,67 @@ async function savePhoto() {
 }
 function addSystem(text) { addMsg("sys", text); }
 
+// ---- 알림음/진동 ----
+let _audioCtx = null;
+function initAudio() {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_audioCtx && _audioCtx.state === "suspended") _audioCtx.resume();
+  } catch (e) {}
+}
+function notifyPing() {
+  try { if (navigator.vibrate) navigator.vibrate(document.hidden ? [50, 40, 50] : 25); } catch (e) {}
+  if (!_audioCtx) return;
+  try {
+    const o = _audioCtx.createOscillator(), g = _audioCtx.createGain();
+    o.type = "sine"; o.frequency.value = 680;
+    const t = _audioCtx.currentTime;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.09, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+    o.connect(g); g.connect(_audioCtx.destination);
+    o.start(t); o.stop(t + 0.3);
+  } catch (e) {}
+}
+
+// ---- 입력 중 표시 ----
+function showTyping(on) {
+  let el = document.getElementById("typing-row");
+  if (on) {
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "typing-row"; el.className = "msg-row peer";
+      el.innerHTML = '<div class="msg peer typing"><span></span><span></span><span></span></div>';
+      $("messages").appendChild(el);
+      $("messages").scrollTop = $("messages").scrollHeight;
+    }
+  } else if (el) { el.remove(); }
+}
+function clearMyTyping() {
+  if (hasFirebase && state.roomId && uid) db.ref("rooms/" + state.roomId + "/typing/" + uid).remove();
+}
+let _lastTyping = 0;
+$("msg-input").addEventListener("input", () => {
+  if (!hasFirebase || !state.roomId) return;
+  const t = now();
+  if (t - _lastTyping > 1200) {
+    _lastTyping = t;
+    const ref = db.ref("rooms/" + state.roomId + "/typing/" + uid);
+    ref.set(t); ref.onDisconnect().remove();
+  }
+});
+
 // 텍스트 전송
 $("chat-form").addEventListener("submit", (e) => {
   e.preventDefault();
+  initAudio();
   const text = $("msg-input").value.trim();
   if (!text) return;
-  addMsg("mine", text);
+  addMsg("mine", text, now());
   $("msg-input").value = "";
+  _lastTyping = 0; clearMyTyping();
   if (hasFirebase) firebaseSendText(text);
-  else setTimeout(() => addMsg("peer", "(데모) 받았어요: " + text), 600);
+  else setTimeout(() => addMsg("peer", "(데모) 받았어요: " + text, now()), 600);
 });
 
 // 사진 전송
@@ -406,8 +481,11 @@ $("photo-input").addEventListener("change", (e) => {
   e.target.value = "";
   if (!file) return;
   const url = URL.createObjectURL(file);
-  addImage("mine", url);
-  if (hasFirebase) firebaseSendPhoto(file);
+  const bubble = addImage("mine", url, now());
+  if (hasFirebase) {
+    if (bubble) bubble.classList.add("sending");
+    firebaseSendPhoto(file).finally(() => { if (bubble) bubble.classList.remove("sending"); });
+  }
 });
 
 // 나가기 = 현재 대화 종료 후 바로 다음 상대 매칭
@@ -611,9 +689,24 @@ function joinRoom(roomId, peerNick, peerUid, peerProfile) {
   mref.on("child_added", (snap) => {
     const msg = snap.val();
     if (!msg || msg.sender === uid) return;   // 내 메시지는 이미 표시됨
-    if (msg.type === "photo") addImage("peer", msg.content);
-    else addMsg("peer", msg.text || "");
+    showTyping(false);                        // 메시지 왔으니 입력중 표시 제거
+    if (msg.type === "photo") addImage("peer", msg.content, msg.ts);
+    else addMsg("peer", msg.text || "", msg.ts);
+    notifyPing();                             // 알림음·진동
   });
+
+  // 상대 입력 중 표시
+  if (peerUid) {
+    const tref = db.ref("rooms/" + roomId + "/typing/" + peerUid);
+    state._typingRef = tref;
+    tref.on("value", (snap) => {
+      const ts = snap.val();
+      const active = ts && (now() - ts < 4500) && state.roomId === roomId;
+      showTyping(active);
+      clearTimeout(state._typingHide);
+      if (active) state._typingHide = setTimeout(() => showTyping(false), 4500);
+    });
+  }
 
   // 상대가 나가면 알림 (closed 표시로 감지 — 방 삭제 전에 신호가 전달됨)
   const cref = db.ref("rooms/" + roomId + "/closed");
@@ -645,6 +738,10 @@ function detachRoom() {
   if (state._msgRef) { state._msgRef.off(); state._msgRef = null; }
   if (state._closedRef) { state._closedRef.off(); state._closedRef = null; }
   if (state._peerNickRef) { state._peerNickRef.off(); state._peerNickRef = null; }
+  if (state._typingRef) { state._typingRef.off(); state._typingRef = null; }
+  clearTimeout(state._typingHide);
+  showTyping(false);
+  clearMyTyping();
   if (state.roomId) { db.ref("rooms/" + state.roomId + "/closed").onDisconnect().cancel(); }
 }
 
