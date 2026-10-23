@@ -281,13 +281,22 @@ $("btn-loc-toggle").addEventListener("click", () => {
   else enableLocation();
 });
 
-// 좌표 → 지역명. 지금은 간단 변환(데모). 추후 정식 역지오코딩으로 교체.
+// 좌표 → 8개 권역 (대략 추정). 서울/경기/인천/강원/충청/전라/경상/제주
 async function regionFromCoords(c) {
-  // 대략적인 한국 광역권 추정 (데모용 placeholder)
-  if (c.lat > 37.4 && c.lat < 37.7 && c.lng > 126.8 && c.lng < 127.2) return "서울";
-  if (c.lat > 36.4 && c.lat < 36.6 && c.lng > 127.2 && c.lng < 127.4) return "세종";
-  if (c.lat > 35.0 && c.lat < 35.3 && c.lng > 128.9 && c.lng < 129.3) return "부산";
-  return "기타지역";
+  const la = c.lat, ln = c.lng;
+  if (la < 33.75 && ln < 127.3) return "제주";
+  // 수도권(위도 37.15 이상)
+  if (la >= 37.15) {
+    if (ln >= 127.6) return "강원";                                   // 수도권 위도라도 동쪽이면 강원
+    if (la >= 37.42 && la <= 37.72 && ln >= 126.76 && ln <= 127.20) return "서울";
+    if (ln < 126.78 && la >= 37.30 && la <= 37.65) return "인천";
+    return "경기";
+  }
+  // 남부(위도 36.05 미만)
+  if (la < 36.05) return ln >= 127.5 ? "경상" : "전라";
+  // 중부(36.05~37.15)
+  if (ln >= 127.9) return la >= 36.6 ? "강원" : "경상";
+  return "충청";
 }
 
 $("btn-start").addEventListener("click", () => {
