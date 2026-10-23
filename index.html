@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>랜덤채팅 (실험)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-  <link rel="stylesheet" href="style.css?v=21">
+  <link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
   <!-- 운영자 공지 배너 -->
@@ -40,12 +40,18 @@
             <b>금지</b>되며 신고 시 운영자가 확인하고 관계기관에 신고할 수 있습니다.</li>
           <li>본 서비스는 <b>만 19세 이상</b>만 이용할 수 있습니다.</li>
         </ul>
-        <p class="fine">본 서비스는 개인이 운영하는 실험용 서비스이며, 위 내용은 이용자 보호와
+        <p class="fine">본 서비스는 개인이 운영하는 서비스이며, 위 내용은 이용자 보호와
           법령 준수를 위한 고지입니다. 아래 동의 시 위 사항에 모두 동의한 것으로 간주됩니다.</p>
+        <p class="fine">
+          <a href="terms.html" target="_blank" rel="noopener">이용약관</a> ·
+          <a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>
+        </p>
       </div>
       <label class="agree">
         <input type="checkbox" id="agree-check">
-        <span>위 내용을 모두 읽고 이해했으며, 만 19세 이상이고 모든 사항에 동의합니다.</span>
+        <span>위 내용을 모두 읽고 이해했으며, 만 19세 이상이고
+          <a href="terms.html" target="_blank" rel="noopener">이용약관</a> 및
+          <a href="privacy.html" target="_blank" rel="noopener">개인정보처리방침</a>에 동의합니다.</span>
       </label>
       <button id="btn-agree" class="primary" disabled>동의하고 시작하기</button>
     </div>
@@ -158,7 +164,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="config.js?v=21"></script>
-  <script src="app.js?v=21"></script>
+  <script src="config.js?v=22"></script>
+  <script src="app.js?v=22"></script>
 </body>
 </html>

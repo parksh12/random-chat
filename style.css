@@ -83,6 +83,7 @@ h1 { font-size: 24px; margin: 0 0 16px; }
 h2 { font-size: 17px; margin: 0 0 10px; }
 p { color: var(--sub); line-height: 1.5; margin: 8px 0; }
 .fine { font-size: 12px; color: var(--sub); }
+.card a { color: var(--primary); }
 
 /* 동의 고지 */
 .notice { background: var(--bg); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
