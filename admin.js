@@ -88,7 +88,8 @@ function watchAll() {
   }, (err) => {
     $("panel-users").innerHTML =
       '<div class="empty">신고를 읽을 권한이 없어요. 관리자 계정인지 확인하세요.<br>(' +
-      (err.code || err.message) + ")</div>";
+      (err.code || err.message) + ')<br><span class="mono">로그인 UID: ' +
+      escapeHtml((auth.currentUser || {}).uid || "없음") + "</span></div>";
   });
 
   db.ref("banned").on("value", (snap) => {
