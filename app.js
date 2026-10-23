@@ -148,26 +148,33 @@ function profileText(age, gender) {
   return parts.length ? "(" + parts.join("·") + ")" : "";
 }
 
-// 대화명: 지역 + 4자리 숫자
-function makeNick(region) {
-  const n = String(Math.floor(1000 + Math.random() * 9000));
-  return (region || "미정") + n;
+// 대화명: 지역 + 4자리 숫자. 숫자는 '한 번 정하면 고정', 지역만 바뀜.
+function makeNum() { return String(Math.floor(1000 + Math.random() * 9000)); }
+function makeNick(region) { return (region || "미정") + makeNum(); }
+
+// 새 상대/첫 입장: 숫자까지 새로 발급
+function newIdentity() {
+  state.nickNum = makeNum();
+  applyNick(true);   // 새 신원이라 변경 안내는 생략
 }
-function refreshNick() {
+// 지역 변경 등: 숫자는 그대로 두고 대화명만 다시 조립
+function applyNick(silent) {
+  if (!state.nickNum) state.nickNum = makeNum();
   const old = state.nick;
-  state.nick = makeNick(state.region);
+  state.nick = (state.region || "미정") + state.nickNum;
   $("nick-preview").textContent = state.nick;
   $("my-name").textContent = state.nick;
-  // 대화 중이면 방의 내 정보도 갱신 → 상대 화면에 실시간 반영 + 나에게도 안내
   if (hasFirebase && state.roomId && uid) {
     db.ref("rooms/" + state.roomId + "/members/" + uid).update({
       nick: state.nick, region: state.region,
     });
-    if (old && old !== "미정0000" && old !== state.nick) {
+    if (!silent && old && old !== "미정0000" && old !== state.nick) {
       addSystem("내 닉네임이 " + old + " → " + state.nick + " 로 변경되었습니다.");
     }
   }
 }
+// 하위 호환: 기존 호출부가 쓰던 이름
+function refreshNick() { newIdentity(); }
 
 function savedLocChoice() {
   try { return localStorage.getItem(LOC_KEY); } catch (e) { return null; }
@@ -189,7 +196,7 @@ function enableLocation() {
       state.region = await regionFromCoords(state.coords);
       state.locOn = true;
       saveLocChoice("on");
-      refreshNick();
+      applyNick(false);      // 숫자 유지, 지역만 변경 (양쪽에 안내)
       applyLocUI();
       if (hasFirebase) firebaseUpdateRegion(state.region);
     },
@@ -203,13 +210,13 @@ function enableLocation() {
   );
 }
 
-// 위치 끄기: 미정으로 되돌림
+// 위치 끄기: 미정으로 되돌림 (숫자는 유지)
 function disableLocation() {
   state.locOn = false;
   state.coords = null;
   state.region = "미정";
   saveLocChoice("off");
-  refreshNick();
+  applyNick(false);      // 숫자 유지, 지역만 미정으로
   applyLocUI();
   if (hasFirebase) firebaseUpdateRegion(state.region);
 }
@@ -408,7 +415,7 @@ function nextPartner() {
   if (hasFirebase) firebaseLeave();
   clearTimeout(state._demoTimer);
   closeReport();
-  refreshNick();               // 새 상대에게는 새 대화명
+  applyNick(true);             // 내 번호는 유지 (지역 기준으로 대화명 재조립)
   show("waiting");
   // 동시에 나가면 매칭이 충돌하므로 짧은 랜덤 지연 후 재매칭 (시간차)
   const delay = hasFirebase ? 150 + Math.floor(Math.random() * 700) : 0;
