@@ -36,8 +36,8 @@ function toggleTheme() {
 $("btn-theme").addEventListener("click", toggleTheme);
 $("btn-theme-chat").addEventListener("click", toggleTheme);
 
-const screens = ["age", "consent", "ready", "waiting", "chat"];
-let currentScreen = "age";
+const screens = ["consent", "ready", "waiting", "chat"];
+let currentScreen = "consent";
 function show(name) {
   currentScreen = name;
   screens.forEach((s) => $("screen-" + s).classList.toggle("active", s === name));
@@ -154,14 +154,18 @@ function makeNick(region) {
   return (region || "미정") + n;
 }
 function refreshNick() {
+  const old = state.nick;
   state.nick = makeNick(state.region);
   $("nick-preview").textContent = state.nick;
   $("my-name").textContent = state.nick;
-  // 대화 중이면 방의 내 정보도 갱신 → 상대 화면에 실시간 반영
+  // 대화 중이면 방의 내 정보도 갱신 → 상대 화면에 실시간 반영 + 나에게도 안내
   if (hasFirebase && state.roomId && uid) {
     db.ref("rooms/" + state.roomId + "/members/" + uid).update({
       nick: state.nick, region: state.region,
     });
+    if (old && old !== "미정0000" && old !== state.nick) {
+      addSystem("내 닉네임이 " + old + " → " + state.nick + " 로 변경되었습니다.");
+    }
   }
 }
 
@@ -223,20 +227,9 @@ function applyLocUI() {
     : "위치: 미정 · 대화 중 📍 버튼으로 켤 수 있어요";
   // 채팅 헤더 토글 버튼
   const t = $("btn-loc-toggle");
-  t.textContent = "📍 " + (state.locOn ? state.region : "위치정보");
+  t.textContent = state.locOn ? state.region : "위치";
   t.classList.toggle("on", state.locOn);
 }
-
-// ---- 0단계: 연령 확인 (만 19세 이상 자가 확인) ----
-const AGE_OK_KEY = "rc_adult_ok";
-$("btn-adult-yes").addEventListener("click", () => {
-  try { localStorage.setItem(AGE_OK_KEY, "1"); } catch (e) {}
-  show("consent");
-});
-$("btn-adult-no").addEventListener("click", () => {
-  $("age-block").style.display = "block";
-  $("btn-adult-yes").disabled = true;
-});
 
 // ---- 1단계: 동의 ----
 $("agree-check").addEventListener("change", (e) => {
@@ -756,8 +749,22 @@ window.addEventListener("resize", fitViewport);
 // 입력창을 누르면(키보드 등장) 잠시 뒤 맨 아래로 스크롤
 $("msg-input").addEventListener("focus", () => setTimeout(fitViewport, 300));
 
-// 시작: 이미 성인 확인했으면 동의 화면부터, 아니면 연령 확인부터
-let _adultOk = false;
-try { _adultOk = localStorage.getItem(AGE_OK_KEY) === "1"; } catch (e) {}
-show(_adultOk ? "consent" : "age");
+// 로고 탭 → 가리기(투명) 토글 — 랜덤채팅 특성상 화면을 가리고 싶을 때
+const BRAND_HIDE_KEY = "rc_brand_hidden";
+function applyBrandHidden() {
+  let hidden = false;
+  try { hidden = localStorage.getItem(BRAND_HIDE_KEY) === "1"; } catch (e) {}
+  document.body.classList.toggle("brand-hidden", hidden);
+}
+function toggleBrand() {
+  const hidden = !document.body.classList.contains("brand-hidden");
+  document.body.classList.toggle("brand-hidden", hidden);
+  try { localStorage.setItem(BRAND_HIDE_KEY, hidden ? "1" : "0"); } catch (e) {}
+}
+document.querySelectorAll(".hero-logo, .topbrand").forEach((el) =>
+  el.addEventListener("click", toggleBrand));
+applyBrandHidden();
+
+// 시작
+show("consent");
 if (!hasFirebase) console.info("데모 모드: Firebase 설정이 비어 있습니다. config.js를 채우면 실제로 동작합니다.");

@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#f4f1fb" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#14121c" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f2f4f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#15171a" media="(prefers-color-scheme: dark)">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>랜덤채팅 (실험)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-  <link rel="stylesheet" href="style.css?v=23">
+  <link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
   <!-- 운영자 공지 배너 -->
@@ -19,23 +19,8 @@
     background:#3b66cf;color:#fff;padding:10px 14px;font-size:14px;text-align:center;
     padding-top:calc(10px + env(safe-area-inset-top,0px))"></div>
 
-  <!-- 0단계: 연령 확인 -->
-  <section id="screen-age" class="screen active">
-    <div class="card center">
-      <div class="hero">
-        <div class="hero-logo">랜덤<span class="brand-num">7942</span></div>
-      </div>
-      <h2>만 19세 이상이십니까?</h2>
-      <p>본 서비스는 성인(만 19세 이상)만 이용할 수 있습니다.</p>
-      <button id="btn-adult-yes" class="primary">예, 만 19세 이상입니다</button>
-      <button id="btn-adult-no" class="secondary" style="width:100%;margin-top:8px">아니오</button>
-      <p id="age-block" class="fine" style="display:none;color:var(--danger)">
-        만 19세 이상만 이용할 수 있습니다. 이용이 제한됩니다.</p>
-    </div>
-  </section>
-
   <!-- 1단계: 이용 동의 -->
-  <section id="screen-consent" class="screen">
+  <section id="screen-consent" class="screen active">
     <div class="card">
       <div class="hero">
         <div class="hero-logo">랜덤<span class="brand-num">7942</span></div>
@@ -53,7 +38,8 @@
           <li>대화 로그는 <b>약 30분 후 자동 삭제</b>됩니다.</li>
           <li>불법촬영물, 성착취물, 타인 사칭·협박, 미성년자 대상 행위 등은
             <b>금지</b>되며 신고 시 운영자가 확인하고 관계기관에 신고할 수 있습니다.</li>
-          <li>본 서비스는 <b>만 19세 이상</b>만 이용할 수 있습니다.</li>
+          <li><b>만 19세 이상이십니까?</b> 본 서비스는 성인(만 19세 이상)만 이용할 수 있으며,
+            아래 동의 시 만 19세 이상임을 확인하는 것입니다.</li>
         </ul>
         <p class="fine">본 서비스는 개인이 운영하는 서비스이며, 위 내용은 이용자 보호와
           법령 준수를 위한 고지입니다. 아래 동의 시 위 사항에 모두 동의한 것으로 간주됩니다.</p>
@@ -118,27 +104,33 @@
   <!-- 4단계: 채팅 -->
   <section id="screen-chat" class="screen">
     <header class="chat-head">
-      <div class="head-row">
-        <button id="btn-theme-chat" class="loctoggle" title="다크/라이트 전환">다크</button>
-        <span class="brand">랜덤<span class="brand-num">7942</span></span>
-        <button id="btn-leave" class="leave">다음 상대 ›</button>
-      </div>
-      <div class="head-row">
-        <span class="names">나 <b id="my-name">—</b> · 상대 <b id="peer-name">—</b> <span id="peer-profile" class="pprofile"></span></span>
-        <div class="head-actions">
-          <button id="btn-loc-toggle" class="loctoggle" title="위치 사용 켜기/끄기">📍 위치정보</button>
-          <button id="btn-report" class="report" title="신고">🚨</button>
+      <div class="peer-info">
+        <div class="peer-av"></div>
+        <div class="peer-meta">
+          <div class="peer-title"><b id="peer-name">상대방</b><span id="peer-profile" class="pprofile"></span></div>
+          <div class="me-sub">나 · <b id="my-name">—</b></div>
         </div>
       </div>
+      <div class="head-actions">
+        <button id="btn-loc-toggle" class="chip-btn" title="위치 사용 켜기/끄기">위치</button>
+        <button id="btn-theme-chat" class="chip-btn" title="다크/라이트 전환">다크</button>
+        <button id="btn-report" class="ic-btn" title="신고" aria-label="신고">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4h13l-2.2 4L17 12H4"/></svg>
+        </button>
+        <button id="btn-leave" class="next-btn">다음</button>
+      </div>
     </header>
-    <div class="safety-bar">⚠️ 개인정보·연락처 공유에 주의하고, 불쾌한 대화는 바로 종료·신고하세요.</div>
+    <div class="safety-bar">개인정보·연락처 공유에 주의하세요. 불쾌한 대화는 바로 신고할 수 있어요.</div>
     <div id="messages" class="messages"></div>
     <form id="chat-form" class="chat-input">
-      <label class="photo-btn" title="사진 보내기">
-        🖼️<input type="file" id="photo-input" accept="image/*" hidden>
+      <label class="ic-input" title="사진 보내기" aria-label="사진 보내기">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M20 16l-4.5-4.5L5 21"/></svg>
+        <input type="file" id="photo-input" accept="image/*" hidden>
       </label>
-      <input type="text" id="msg-input" placeholder="메시지 입력…" autocomplete="off">
-      <button type="submit" class="primary">전송</button>
+      <input type="text" id="msg-input" placeholder="메시지 입력" autocomplete="off">
+      <button type="submit" class="send-btn" aria-label="전송">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V5M5.5 11.5 12 5l6.5 6.5"/></svg>
+      </button>
     </form>
   </section>
 
@@ -179,7 +171,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="config.js?v=23"></script>
-  <script src="app.js?v=23"></script>
+  <script src="config.js?v=24"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>
