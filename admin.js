@@ -275,11 +275,19 @@ function duration(r) {   // 첫 메시지 ~ 마지막 메시지 시간
   const ts = r.messages ? Object.values(r.messages).map((m) => m.ts || 0) : [];
   return ts.length ? Math.max(...ts) - Math.min(...ts) : 0;
 }
+const photoCount = (r) => (r.messages ? Object.values(r.messages).filter((m) => m.type === "photo").length : 0);
+const _sizeCache = new WeakMap();
+function roomSize(r) {   // DB 저장 용량(바이트, 근사치)
+  if (!_sizeCache.has(r)) _sizeCache.set(r, new Blob([JSON.stringify(r)]).size);
+  return _sizeCache.get(r);
+}
 const SORTS = {
-  new:  { label: "최신순",         fn: (a, b) => (b.ts || 0) - (a.ts || 0) },
-  old:  { label: "오래된순",       fn: (a, b) => (a.ts || 0) - (b.ts || 0) },
-  msgs: { label: "메시지 많은순",  fn: (a, b) => msgCount(b) - msgCount(a) || (b.ts || 0) - (a.ts || 0) },
-  dur:  { label: "대화 시간 긴순", fn: (a, b) => duration(b) - duration(a) || (b.ts || 0) - (a.ts || 0) },
+  new:    { label: "최신순",         fn: (a, b) => (b.ts || 0) - (a.ts || 0) },
+  old:    { label: "오래된순",       fn: (a, b) => (a.ts || 0) - (b.ts || 0) },
+  msgs:   { label: "메시지 많은순",  fn: (a, b) => msgCount(b) - msgCount(a) || (b.ts || 0) - (a.ts || 0) },
+  dur:    { label: "대화 시간 긴순", fn: (a, b) => duration(b) - duration(a) || (b.ts || 0) - (a.ts || 0) },
+  photos: { label: "사진 많은순",    fn: (a, b) => photoCount(b) - photoCount(a) || (b.ts || 0) - (a.ts || 0) },
+  size:   { label: "용량 큰순",      fn: (a, b) => roomSize(b) - roomSize(a) },
 };
 
 function renderLogs(rooms) {
@@ -301,7 +309,8 @@ function renderLogs(rooms) {
   allLbl.appendChild(allChk);
   allLbl.appendChild(document.createTextNode(" 전체 선택"));
   const info = document.createElement("span"); info.className = "muted";
-  info.textContent = "총 " + rooms.length + "개 대화 · 메시지 " + totalMsgs + "개";
+  info.textContent = "총 " + rooms.length + "개 대화 · 메시지 " + totalMsgs + "개 · " +
+    sizeStr(rooms.reduce((a, r) => a + roomSize(r), 0));
   const sel = document.createElement("select");
   Object.entries(SORTS).forEach(([k, s]) => {
     const o = document.createElement("option"); o.value = k; o.textContent = s.label;
@@ -339,7 +348,8 @@ function renderLogs(rooms) {
     const meta = document.createElement("div");
     meta.innerHTML = "<b>" + nicks.map(escapeHtml).join(" ↔ ") + "</b>" +
       '<div class="muted" style="margin-top:4px">' + timeStr(r.ts) + " · 메시지 " + msgs.length +
-      "개 · " + durStr(duration(r)) + " · " + (r.closed ? "종료됨" : "진행 중") + "</div>";
+      "개 · 사진 " + photoCount(r) + "장 · " + durStr(duration(r)) + " · " + sizeStr(roomSize(r)) +
+      " · " + (r.closed ? "종료됨" : "진행 중") + "</div>";
     left.appendChild(chk); left.appendChild(meta);
     const btn = document.createElement("button"); btn.className = "ghost"; btn.textContent = "대화 보기";
     row.appendChild(left); row.appendChild(btn); item.appendChild(row);
@@ -454,6 +464,9 @@ function renderLog(r) {
 function durStr(ms) {
   const m = Math.round(ms / 60000);
   return m < 1 ? "1분 미만" : m < 60 ? m + "분" : Math.floor(m / 60) + "시간 " + (m % 60) + "분";
+}
+function sizeStr(b) {
+  return b < 1024 ? b + "B" : b < 1048576 ? (b / 1024).toFixed(1) + "KB" : (b / 1048576).toFixed(2) + "MB";
 }
 function timeStr(ts) {
   const d = new Date(ts || 0);
