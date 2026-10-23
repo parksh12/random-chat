@@ -484,7 +484,15 @@ $("photo-input").addEventListener("change", (e) => {
   const bubble = addImage("mine", url, now());
   if (hasFirebase) {
     if (bubble) bubble.classList.add("sending");
-    firebaseSendPhoto(file).finally(() => { if (bubble) bubble.classList.remove("sending"); });
+    // 상대에게도 '입력 중…'과 동일한 표시 (사진 준비·전송 중)
+    if (state.roomId) {
+      const tref = db.ref("rooms/" + state.roomId + "/typing/" + uid);
+      tref.set(now()); tref.onDisconnect().remove();
+    }
+    firebaseSendPhoto(file).finally(() => {
+      if (bubble) bubble.classList.remove("sending");
+      clearMyTyping();
+    });
   }
 });
 
