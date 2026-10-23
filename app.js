@@ -318,7 +318,7 @@ function cancelMatching() {
   if (hasFirebase) firebaseCancelMatching();
 }
 function enterChat() {
-  $("messages").innerHTML = "";
+  $("messages").innerHTML = '<div class="msg-spacer"></div>';  // 아래부터 쌓이도록
   show("chat");
   fitViewport();
 }
