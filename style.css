@@ -65,6 +65,39 @@ body {
 :root[data-theme="dark"] .safety-bar { background: #3a2f1c; color: #e3b667; }
 
 
+/* 운영자 공지 카드 */
+.notice-toast {
+  position: fixed; z-index: 80; left: 50%;
+  top: calc(12px + var(--safe-t));
+  width: min(480px, calc(100% - 24px - var(--safe-l) - var(--safe-r)));
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 12px 14px 14px; border-radius: 16px;
+  background: var(--card); color: var(--fg);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgba(20, 30, 60, .14), 0 2px 6px rgba(20, 30, 60, .06);
+  opacity: 0; pointer-events: none;
+  transform: translate(-50%, -16px);
+  transition: opacity .25s ease, transform .3s cubic-bezier(.2, .8, .2, 1);
+}
+.notice-toast.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+body[data-screen="chat"] .notice-toast { top: calc(70px + var(--safe-t)); }
+.nt-ic {
+  flex: none; width: 34px; height: 34px; border-radius: 11px;
+  display: grid; place-items: center; color: #fff; background: var(--grad);
+}
+.nt-body { flex: 1; min-width: 0; padding-top: 1px; }
+.nt-title { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 2px; }
+.nt-text { font-size: 14.5px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.nt-close {
+  flex: none; width: 28px; height: 28px; border: none; border-radius: 8px; padding: 0;
+  display: grid; place-items: center; background: transparent; color: var(--sub); cursor: pointer;
+}
+.nt-close:hover { background: var(--line); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .notice-toast { box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+}
+:root[data-theme="dark"] .notice-toast { box-shadow: 0 10px 30px rgba(0, 0, 0, .45); }
+
 /* 화면 전환 */
 .screen { display: none; }
 .screen.active { display: flex; flex-direction: column; min-height: 100dvh; }

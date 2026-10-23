@@ -41,6 +41,7 @@ const screens = ["gate", "consent", "ready", "waiting", "chat"];
 let currentScreen = "gate";
 function show(name) {
   currentScreen = name;
+  document.body.dataset.screen = name;   // 공지 카드 위치(채팅 중엔 헤더 아래)
   screens.forEach((s) => $("screen-" + s).classList.toggle("active", s === name));
   setPresence();
 }
@@ -108,12 +109,26 @@ if (hasFirebase) {
   });
   setInterval(setPresence, 30000);   // 접속 상태 주기적 갱신(집계 정확도)
   // 운영자 공지 배너
+  // 닫은 공지는 같은 공지(ts)가 유지되는 동안 다시 띄우지 않음
+  const NOTICE_KEY = "rc_notice_closed";
+  let _noticeTs = null;
   db.ref("config/notice").on("value", (s) => {
     const n = s.val();
     const bar = document.getElementById("notice-bar");
     if (!bar) return;
-    if (n && n.text) { bar.textContent = "📢 " + n.text; bar.style.display = "block"; }
-    else { bar.style.display = "none"; }
+    let closed = null;
+    try { closed = localStorage.getItem(NOTICE_KEY); } catch (e) {}
+    if (n && n.text && String(n.ts) !== closed) {
+      _noticeTs = n.ts;
+      document.getElementById("nt-text").textContent = n.text;
+      bar.classList.add("show");
+    } else {
+      bar.classList.remove("show");
+    }
+  });
+  document.getElementById("nt-close").addEventListener("click", () => {
+    document.getElementById("notice-bar").classList.remove("show");
+    try { localStorage.setItem(NOTICE_KEY, String(_noticeTs)); } catch (e) {}
   });
 }
 const now = () => Date.now();
