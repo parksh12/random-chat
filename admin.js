@@ -18,9 +18,39 @@ let bannedSet = {};      // uid -> true
 $("btn-login").addEventListener("click", login);
 $("pw").addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
 function login() {
+  initAudio();
   $("login-msg").textContent = "";
   auth.signInWithEmailAndPassword($("email").value.trim(), $("pw").value)
     .catch((e) => { $("login-msg").textContent = "로그인 실패: " + (e.code || e.message); });
+}
+
+// ---- 새 신고 알림 (소리·진동·탭 제목) ----
+let _audioCtx = null, _prevCount = null, _titleTimer = null;
+function initAudio() {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_audioCtx && _audioCtx.state === "suspended") _audioCtx.resume();
+  } catch (e) {}
+}
+function alertNewReport() {
+  try { if (navigator.vibrate) navigator.vibrate([60, 40, 60]); } catch (e) {}
+  if (_audioCtx) try {
+    const o = _audioCtx.createOscillator(), g = _audioCtx.createGain();
+    o.type = "triangle"; o.frequency.value = 760;
+    const t = _audioCtx.currentTime;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+    o.connect(g); g.connect(_audioCtx.destination); o.start(t); o.stop(t + 0.37);
+  } catch (e) {}
+  // 탭 제목 깜빡임
+  clearInterval(_titleTimer);
+  let on = true, n = 0;
+  _titleTimer = setInterval(() => {
+    document.title = on ? "🔴 새 신고!" : "랜덤7942 · 관리자";
+    on = !on;
+    if (++n > 8) { clearInterval(_titleTimer); document.title = "랜덤7942 · 관리자"; }
+  }, 600);
 }
 $("btn-logout").addEventListener("click", () => auth.signOut());
 $("btn-refresh").addEventListener("click", () => location.reload());
@@ -52,6 +82,8 @@ function watchAll() {
     allReports = [];
     snap.forEach((ch) => { allReports.push({ key: ch.key, ...ch.val() }); });
     allReports.reverse();
+    if (_prevCount !== null && allReports.length > _prevCount) alertNewReport();  // 새 신고 알림
+    _prevCount = allReports.length;
     renderSummary(); renderUsers(); renderRecent();
   }, (err) => {
     $("panel-users").innerHTML =
@@ -110,6 +142,8 @@ function renderSummary() {
   $("c-today").textContent = allReports.filter((r) => (r.ts || 0) >= dayAgo).length;
   $("c-users").textContent = users.size;
   $("c-banned").textContent = Object.keys(bannedSet).filter((k) => bannedSet[k]).length;
+  const un = $("c-unresolved");
+  if (un) un.textContent = allReports.filter((r) => !r.resolved).length;
   renderStats();
 }
 
@@ -196,15 +230,23 @@ function renderRecent() {
   box.innerHTML = "";
   allReports.forEach((r) => {
     const item = document.createElement("div");
-    item.className = "item";
+    item.className = "item" + (r.resolved ? " resolved" : "");
     const row = document.createElement("div");
     row.className = "row";
     const left = document.createElement("div");
     left.innerHTML = `<span class="tag">${escapeHtml(r.reason || "기타")}</span>` +
+      (r.resolved ? ' <span class="tag ok">처리완료</span>' : "") +
       `<div class="muted" style="margin-top:6px">신고자 <b>${escapeHtml(r.reporterNick || "?")}</b> → 대상 <b>${escapeHtml(r.peerNick || "?")}</b><br>${timeStr(r.ts)}</div>`;
+    const acts = document.createElement("div"); acts.className = "acts";
     const btnLog = document.createElement("button");
     btnLog.className = "ghost"; btnLog.textContent = "대화 보기";
-    row.appendChild(left); row.appendChild(btnLog);
+    const btnDone = document.createElement("button");
+    btnDone.className = r.resolved ? "ghost" : "primary";
+    btnDone.textContent = r.resolved ? "처리취소" : "처리완료";
+    btnDone.addEventListener("click", () =>
+      db.ref("reports/" + r.key + "/resolved").set(!r.resolved));
+    acts.appendChild(btnLog); acts.appendChild(btnDone);
+    row.appendChild(left); row.appendChild(acts);
     item.appendChild(row);
     const log = document.createElement("div");
     log.className = "log"; log.appendChild(renderLog(r));

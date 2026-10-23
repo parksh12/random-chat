@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-180.png">
   <title>랜덤7942 · 관리자</title>
   <style>
     :root { --bg:#14161a; --card:#1e2127; --fg:#eceef1; --sub:#9aa1ab; --line:#2c3036;
@@ -66,6 +68,9 @@
     .tag { display:inline-block; background:var(--danger); color:#fff; font-size:12px;
            padding:3px 8px; border-radius:20px; margin:2px 4px 2px 0; }
     .tag.cnt { background:var(--warn); }
+    .tag.ok { background:var(--ok); }
+    .scard.alert .n { color:var(--warn); }
+    .item.resolved { opacity:.55; }
     .muted { color:var(--sub); font-size:13px; }
     .mono { font-family:ui-monospace,Consolas,monospace; font-size:12px; color:var(--sub); }
     .acts { display:flex; gap:6px; }
@@ -110,7 +115,7 @@
       </div>
       <div class="section-title">신고·차단</div>
       <div class="cards">
-        <div class="scard"><div class="n" id="c-reports">–</div><div class="t">총 신고</div></div>
+        <div class="scard alert"><div class="n" id="c-unresolved">–</div><div class="t">미처리 신고</div></div>
         <div class="scard"><div class="n" id="c-today">–</div><div class="t">오늘 신고</div></div>
         <div class="scard"><div class="n" id="c-users">–</div><div class="t">신고된 이용자</div></div>
         <div class="scard"><div class="n" id="c-banned">–</div><div class="t">차단된 이용자</div></div>
@@ -143,7 +148,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="config.js?v=29"></script>
-  <script src="admin.js?v=29"></script>
+  <script src="config.js?v=30"></script>
+  <script src="admin.js?v=30"></script>
 </body>
 </html>
