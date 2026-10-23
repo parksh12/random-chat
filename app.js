@@ -113,7 +113,7 @@ if (hasFirebase) {
     const hero = document.getElementById("hero-live");
     if (hero) hero.innerHTML = "🟢 현재 <b>" + n + "</b>명 접속 중";
     const wc = document.getElementById("wait-count");
-    if (wc) wc.innerHTML = "현재 <b>" + n + "</b>명이 함께 있어요";
+    if (wc) wc.innerHTML = "현재 <b>" + n + "</b>명 접속 중";
   });
   // 운영자 공지 배너
   db.ref("config/notice").on("value", (s) => {
@@ -311,6 +311,13 @@ $("btn-cancel").addEventListener("click", () => {
 
 // ---- 3·4단계: 매칭 & 채팅 ----
 function startMatching() {
+  // 혼자 오래 기다리면 안내 문구 노출
+  const hint = $("wait-hint");
+  if (hint) hint.style.display = "none";
+  clearTimeout(state._waitHintTimer);
+  state._waitHintTimer = setTimeout(() => {
+    if (!state.roomId && hint) hint.style.display = "block";
+  }, 10000);
   if (hasFirebase) {
     firebaseStartMatching();  // 추후 구현
   } else {
@@ -325,9 +332,14 @@ function startMatching() {
 }
 function cancelMatching() {
   clearTimeout(state._demoTimer);
+  clearTimeout(state._waitHintTimer);
   if (hasFirebase) firebaseCancelMatching();
 }
 function enterChat() {
+  clearTimeout(state._waitHintTimer);
+  // 이전 대화의 사진 blob URL 정리 (메모리)
+  (state._blobUrls || []).forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) {} });
+  state._blobUrls = [];
   $("messages").innerHTML = '<div class="msg-spacer"></div>';  // 아래부터 쌓이도록
   show("chat");
   fitViewport();
@@ -422,6 +434,22 @@ async function savePhoto() {
 }
 function addSystem(text) { addMsg("sys", text); }
 
+// 상대가 나갔을 때: 눈에 띄는 안내 + '다음 상대 찾기' 버튼
+function addLeaveNotice() {
+  if (document.getElementById("leave-notice")) return;  // 중복 방지
+  const wrap = document.createElement("div");
+  wrap.id = "leave-notice"; wrap.className = "leave-notice";
+  wrap.innerHTML = '<div>상대방이 나갔어요</div>';
+  const btn = document.createElement("button");
+  btn.className = "primary"; btn.textContent = "다음 상대 찾기";
+  btn.addEventListener("click", nextPartner);
+  wrap.appendChild(btn);
+  const box = $("messages");
+  const typing = document.getElementById("typing-row");
+  if (typing) box.insertBefore(wrap, typing); else box.appendChild(wrap);
+  box.scrollTop = box.scrollHeight;
+}
+
 // ---- 알림음/진동 ----
 let _audioCtx = null;
 function initAudio() {
@@ -496,6 +524,11 @@ function floodBlocked(weight) {
   for (let i = 0; i < weight; i++) _sendStamps.push(t);
   return false;
 }
+// 도배 경고는 3초에 한 번만 표시
+let _lastFloodWarn = 0;
+function floodWarn(msg) {
+  if (now() - _lastFloodWarn > 3000) { _lastFloodWarn = now(); addSystem(msg); }
+}
 
 // 텍스트 전송
 $("chat-form").addEventListener("submit", (e) => {
@@ -503,7 +536,7 @@ $("chat-form").addEventListener("submit", (e) => {
   initAudio();
   let text = $("msg-input").value.trim();
   if (!text) return;
-  if (floodBlocked(1)) { addSystem("너무 빠르게 보내고 있어요. 잠시 후 다시 보내주세요."); return; }
+  if (floodBlocked(1)) { floodWarn("너무 빠르게 보내고 있어요. 잠시 후 다시 보내주세요."); return; }
   text = filterText(text);
   $("msg-input").value = "";
   _lastTyping = 0; clearMyTyping();
@@ -523,11 +556,12 @@ $("photo-input").addEventListener("change", (e) => {
   e.target.value = "";
   if (!file) return;
   if (now() - _lastPhotoAt < 2000 || floodBlocked(3)) {
-    addSystem("사진을 너무 빠르게 보내고 있어요. 잠시 후 다시 시도하세요.");
+    floodWarn("사진을 너무 빠르게 보내고 있어요. 잠시 후 다시 시도하세요.");
     return;
   }
   _lastPhotoAt = now();
   const url = URL.createObjectURL(file);
+  (state._blobUrls = state._blobUrls || []).push(url);  // 메모리 정리용 추적
   const bubble = addImage("mine", url, now());
   if (hasFirebase) {
     if (bubble) bubble.classList.add("sending");
@@ -734,6 +768,7 @@ function joinRoom(roomId, peerNick, peerUid, peerProfile) {
   $("peer-profile").textContent = "";   // 상대 연령·성별은 화면에 표시하지 않음(집계는 유지)
   enterChat();
   addSystem((peerNick || "상대방") + "님과 연결되었습니다.");
+  addSystem("👋 가볍게 인사해보세요");
 
   // 내가 접속을 끊으면 상대에게 종료 신호 (삭제가 아니라 표시 → 상대가 읽을 수 있음)
   db.ref("rooms/" + roomId + "/closed").onDisconnect().set(true);
@@ -768,7 +803,7 @@ function joinRoom(roomId, peerNick, peerUid, peerProfile) {
   state._closedRef = cref;
   cref.on("value", (snap) => {
     if (snap.val() === true && state.roomId === roomId) {
-      addSystem("상대방과의 연결이 끊어졌습니다.");
+      addLeaveNotice();   // "연결 끊김" + 다음 상대 찾기 버튼
     }
   });
 

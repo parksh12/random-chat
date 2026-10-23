@@ -170,6 +170,13 @@ body.brand-hidden .hero-logo, body.brand-hidden .topbrand { opacity: 0; }
 }
 /* 대화를 아래부터 쌓이게(폰): 메시지가 적을 땐 이 여백이 커져 내용을 바닥으로 밀어냄 */
 .msg-spacer { flex: 1 0 auto; min-height: 0; }
+
+/* 상대가 나갔을 때 안내 카드 */
+.leave-notice { align-self: center; text-align: center; margin: 12px 0; padding: 16px 18px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.06); max-width: 300px; }
+.leave-notice > div { color: var(--sub); font-size: 14px; margin-bottom: 12px; }
+.leave-notice .primary { width: 100%; }
 /* 데스크톱(넓은 화면)에서는 위에서부터 시작 */
 @media (min-width: 768px) { .msg-spacer { display: none; } }
 .msg { max-width: 76%; padding: 10px 14px; border-radius: 20px; line-height: 1.45;
