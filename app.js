@@ -107,14 +107,6 @@ if (hasFirebase) {
     alert("서버 연결에 실패했어요. 잠시 후 새로고침 해주세요.");
   });
   setInterval(setPresence, 30000);   // 접속 상태 주기적 갱신(집계 정확도)
-  // 실시간 접속자 수 표시 (홈 + 대기 화면)
-  db.ref("stats/online").on("value", (s) => {
-    const n = Math.max(0, s.val() || 0);
-    const hero = document.getElementById("hero-live");
-    if (hero) hero.innerHTML = "🟢 현재 <b>" + n + "</b>명 접속 중";
-    const wc = document.getElementById("wait-count");
-    if (wc) wc.innerHTML = "현재 <b>" + n + "</b>명 접속 중";
-  });
   // 운영자 공지 배너
   db.ref("config/notice").on("value", (s) => {
     const n = s.val();
