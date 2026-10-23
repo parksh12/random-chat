@@ -61,8 +61,10 @@ auth.onAuthStateChanged((u) => {
   if (u) {
     $("login").style.display = "none";
     $("main").style.display = "block";
+    $("whoami").textContent = (u.email || u.uid) + " · v46";
     watchAll();
   } else {
+    ["reports", "banned", "rooms", "presence", "config/notice"].forEach((p) => db.ref(p).off());
     $("main").style.display = "none";
     $("login").style.display = "block";
   }
@@ -88,10 +90,12 @@ function watchAll() {
     _prevCount = allReports.length;
     renderSummary(); renderUsers(); renderRecent();
   }, (err) => {
+    if (!auth.currentUser) return;   // 로그아웃으로 구독이 끊긴 경우는 무시
     $("panel-users").innerHTML =
       '<div class="empty">신고를 읽을 권한이 없어요. 관리자 계정인지 확인하세요.<br>(' +
       (err.code || err.message) + ')<br><span class="mono">로그인 UID: ' +
-      escapeHtml((auth.currentUser || {}).uid || "없음") + "</span></div>";
+      escapeHtml(auth.currentUser.uid) + " (" + escapeHtml(auth.currentUser.email || "이메일 없음") +
+      ")</span></div>";
   });
 
   db.ref("banned").on("value", (snap) => {
