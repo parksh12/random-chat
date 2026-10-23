@@ -36,8 +36,8 @@ function toggleTheme() {
 $("btn-theme").addEventListener("click", toggleTheme);
 $("btn-theme-chat").addEventListener("click", toggleTheme);
 
-const screens = ["consent", "ready", "waiting", "chat"];
-let currentScreen = "consent";
+const screens = ["age", "consent", "ready", "waiting", "chat"];
+let currentScreen = "age";
 function show(name) {
   currentScreen = name;
   screens.forEach((s) => $("screen-" + s).classList.toggle("active", s === name));
@@ -226,6 +226,17 @@ function applyLocUI() {
   t.textContent = "📍 " + (state.locOn ? state.region : "위치정보");
   t.classList.toggle("on", state.locOn);
 }
+
+// ---- 0단계: 연령 확인 (만 19세 이상 자가 확인) ----
+const AGE_OK_KEY = "rc_adult_ok";
+$("btn-adult-yes").addEventListener("click", () => {
+  try { localStorage.setItem(AGE_OK_KEY, "1"); } catch (e) {}
+  show("consent");
+});
+$("btn-adult-no").addEventListener("click", () => {
+  $("age-block").style.display = "block";
+  $("btn-adult-yes").disabled = true;
+});
 
 // ---- 1단계: 동의 ----
 $("agree-check").addEventListener("change", (e) => {
@@ -475,6 +486,7 @@ function doMatchInner() {
   }, (err, committed) => {
     if (err || !committed) { setTimeout(firebaseStartMatching, 400); return; }
     if (claimed) {
+      if (claimed.uid === uid) { setTimeout(firebaseStartMatching, 300); return; }  // 자기 자신 방지
       // 잡은 상대가 차단된 사용자면 무시하고 다시 시도
       db.ref("banned/" + claimed.uid).once("value", (bs) => {
         if (bs.val() === true) { setTimeout(firebaseStartMatching, 300); return; }
@@ -547,6 +559,13 @@ function consumeAssign(v) {
   db.ref("rooms/" + v.roomId).once("value", (rs) => {
     const room = rs.val();
     if (!room || room.closed) return;      // 이미 사라진/닫힌 방이면 무시
+    const m = room.members || {};
+    const pk = Object.keys(m).find((k) => k !== uid);
+    if (!pk) {                             // 상대가 없는(자기 자신/빈) 방 → 무시하고 재매칭
+      db.ref("rooms/" + v.roomId).remove();
+      if (!state.roomId) setTimeout(firebaseStartMatching, 300);
+      return;
+    }
     if (state.roomId) {                    // 대화 중이면 현재 방 종료(상대에게 알림)
       const old = state.roomId;
       detachRoom();
@@ -556,10 +575,8 @@ function consumeAssign(v) {
     }
     stopWaitBeat();
     db.ref("waiting").onDisconnect().cancel();
-    const m = room.members || {};
-    const pk = Object.keys(m).find((k) => k !== uid);
-    const pm = pk ? m[pk] : null;
-    joinRoom(v.roomId, pm ? pm.nick : "상대방", pk || null,
+    const pm = m[pk];
+    joinRoom(v.roomId, pm ? pm.nick : "상대방", pk,
              pm ? profileText(pm.age, pm.gender) : "");
   });
 }
@@ -739,6 +756,8 @@ window.addEventListener("resize", fitViewport);
 // 입력창을 누르면(키보드 등장) 잠시 뒤 맨 아래로 스크롤
 $("msg-input").addEventListener("focus", () => setTimeout(fitViewport, 300));
 
-// 시작
-show("consent");
+// 시작: 이미 성인 확인했으면 동의 화면부터, 아니면 연령 확인부터
+let _adultOk = false;
+try { _adultOk = localStorage.getItem(AGE_OK_KEY) === "1"; } catch (e) {}
+show(_adultOk ? "consent" : "age");
 if (!hasFirebase) console.info("데모 모드: Firebase 설정이 비어 있습니다. config.js를 채우면 실제로 동작합니다.");
