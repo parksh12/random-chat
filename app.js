@@ -33,8 +33,9 @@ function toggleTheme() {
   try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
   applyTheme(next);
 }
-$("btn-theme").addEventListener("click", toggleTheme);
-$("btn-theme-chat").addEventListener("click", toggleTheme);
+["btn-theme", "btn-theme-chat"].forEach((id) => {
+  const b = $(id); if (b) b.addEventListener("click", toggleTheme);
+});
 
 const screens = ["consent", "ready", "waiting", "chat"];
 let currentScreen = "consent";
