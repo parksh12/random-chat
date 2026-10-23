@@ -47,9 +47,9 @@ function alertNewReport() {
   clearInterval(_titleTimer);
   let on = true, n = 0;
   _titleTimer = setInterval(() => {
-    document.title = on ? "🔴 새 신고!" : "랜덤7942 · 관리자";
+    document.title = on ? "🔴 새 신고!" : "파워닉스 · 관리자";
     on = !on;
-    if (++n > 8) { clearInterval(_titleTimer); document.title = "랜덤7942 · 관리자"; }
+    if (++n > 8) { clearInterval(_titleTimer); document.title = "파워닉스 · 관리자"; }
   }, 600);
 }
 $("btn-logout").addEventListener("click", () => auth.signOut());
@@ -94,6 +94,16 @@ function watchAll() {
   db.ref("banned").on("value", (snap) => {
     bannedSet = snap.val() || {};
     renderSummary(); renderUsers(); renderRecent(); renderBanned();
+  });
+
+  // 브레인스토밍 대화 로그 (운영자 취합용 — 참가자에게 기록됨을 고지)
+  db.ref("rooms").on("value", (snap) => {
+    const rooms = [];
+    snap.forEach((ch) => { rooms.push({ id: ch.key, ...(ch.val() || {}) }); });
+    rooms.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    renderLogs(rooms);
+  }, (err) => {
+    $("panel-logs").innerHTML = '<div class="empty">로그 읽기 권한 없음 (' + (err.code || "") + ")</div>";
   });
 
   // 실시간 접속 현황(익명 집계 — 숫자만)
@@ -260,6 +270,56 @@ function renderRecent() {
     btnLog.addEventListener("click", () => log.classList.toggle("open"));
     box.appendChild(item);
   });
+}
+
+// ---- 브레인스토밍 대화 로그 ----
+function renderLogs(rooms) {
+  const box = $("panel-logs");
+  if (!rooms.length) { box.innerHTML = '<div class="empty">아직 대화가 없어요.</div>'; return; }
+  const totalMsgs = rooms.reduce((a, r) => a + (r.messages ? Object.keys(r.messages).length : 0), 0);
+  box.innerHTML = '<div class="muted" style="margin-bottom:10px">총 ' + rooms.length +
+    '개 대화 · 메시지 ' + totalMsgs + '개 · 최신순</div>';
+  rooms.forEach((r) => {
+    const members = r.members || {};
+    const nicks = Object.values(members).map((m) => m.nick || "익명");
+    const msgs = r.messages ? Object.values(r.messages) : [];
+    const item = document.createElement("div"); item.className = "item";
+    const row = document.createElement("div"); row.className = "row";
+    const left = document.createElement("div");
+    left.innerHTML = "<b>" + nicks.map(escapeHtml).join(" ↔ ") + "</b>" +
+      '<div class="muted" style="margin-top:4px">' + timeStr(r.ts) + " · 메시지 " + msgs.length +
+      "개 · " + (r.closed ? "종료됨" : "진행 중") + "</div>";
+    const btn = document.createElement("button"); btn.className = "ghost"; btn.textContent = "대화 보기";
+    row.appendChild(left); row.appendChild(btn); item.appendChild(row);
+    const log = document.createElement("div"); log.className = "log";
+    log.appendChild(renderRoomMsgs(members, msgs));
+    item.appendChild(log);
+    btn.addEventListener("click", () => log.classList.toggle("open"));
+    box.appendChild(item);
+  });
+}
+function renderRoomMsgs(members, msgs) {
+  const wrap = document.createElement("div"); wrap.className = "msgs";
+  if (!msgs.length) {
+    const p = document.createElement("div"); p.className = "muted"; p.textContent = "메시지 없음"; return p;
+  }
+  msgs.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  const firstUid = Object.keys(members)[0];
+  msgs.forEach((m) => {
+    const b = document.createElement("div");
+    b.className = "bubble " + (m.sender === firstUid ? "rep" : "oth");
+    const nick = (members[m.sender] || {}).nick || "익명";
+    if (m.type === "photo") {
+      const cap = document.createElement("div"); cap.className = "mono"; cap.textContent = nick;
+      const img = document.createElement("img"); img.src = m.content;
+      b.appendChild(cap); b.appendChild(img);
+    } else {
+      b.innerHTML = '<div class="mono" style="margin-bottom:2px">' + escapeHtml(nick) + "</div>" +
+        escapeHtml(m.text || "");
+    }
+    wrap.appendChild(b);
+  });
+  return wrap;
 }
 
 // ---- 차단 목록 ----

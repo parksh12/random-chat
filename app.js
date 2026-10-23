@@ -131,8 +131,8 @@ const ROOM_TTL = 30 * 60 * 1000;   // 30분
 const LOC_KEY = "rc_loc_choice";   // "on" | "off" | null(아직 선택 안 함)
 const AGE_KEY = "rc_age", GENDER_KEY = "rc_gender";
 const state = {
-  region: "미정",
-  nick: "미정0000",
+  region: "익명",
+  nick: "익명0000",
   coords: null,
   locOn: false,
   age: "미정",
@@ -171,7 +171,7 @@ function applyNick(silent) {
     db.ref("rooms/" + state.roomId + "/members/" + uid).update({
       nick: state.nick, region: state.region,
     });
-    if (!silent && old && old !== "미정0000" && old !== state.nick) {
+    if (!silent && old && old !== "익명0000" && old !== state.nick) {
       addSystem("내 닉네임이 " + old + " → " + state.nick + " 로 변경되었습니다.");
     }
   }
@@ -226,19 +226,7 @@ function disableLocation() {
 
 // 위치 상태를 준비화면·채팅 버튼에 모두 반영
 function applyLocUI() {
-  const choice = savedLocChoice();
-  // 입장 준비 화면: 아직 한 번도 선택 안 했으면 '동의' 버튼, 선택했으면 상태만 표시
-  const firstTime = choice === null;
-  $("loc-row").style.display = firstTime ? "flex" : "none";
-  $("loc-after").style.display = firstTime ? "none" : "block";
-  $("loc-status").textContent = "위치: " + (state.locOn ? state.region : "미정");
-  $("loc-after").textContent = state.locOn
-    ? "위치: " + state.region + " · 대화 중 📍 버튼으로 끌 수 있어요"
-    : "위치: 미정 · 대화 중 📍 버튼으로 켤 수 있어요";
-  // 채팅 헤더 토글 버튼
-  const t = $("btn-loc-toggle");
-  t.textContent = state.locOn ? state.region : "위치";
-  t.classList.toggle("on", state.locOn);
+  // 브레인스토밍 모드: 위치 기능 사용 안 함 (UI 숨김)
 }
 
 // ---- 0단계: 베타 비밀번호 게이트 (매번 입력) ----
@@ -748,12 +736,11 @@ function consumeAssign(v) {
       if (!state.roomId) setTimeout(firebaseStartMatching, 300);
       return;
     }
-    if (state.roomId) {                    // 대화 중이면 현재 방 종료(상대에게 알림)
+    if (state.roomId) {                    // 대화 중이면 현재 방 종료(상대에게 알림, 로그는 보존)
       const old = state.roomId;
       detachRoom();
       state.roomId = null;
       db.ref("rooms/" + old + "/closed").set(true);
-      setTimeout(() => db.ref("rooms/" + old).remove(), 1500);
     }
     stopWaitBeat();
     db.ref("waiting").onDisconnect().cancel();
@@ -776,13 +763,13 @@ function joinRoom(roomId, peerNick, peerUid, peerProfile) {
       state.peerUid = Object.keys(m).find((k) => k !== uid) || null;
     });
   }
-  if (state.nick && state.nick !== "미정0000") $("my-name").textContent = state.nick;
+  if (state.nick && state.nick !== "익명0000") $("my-name").textContent = state.nick;
   else refreshNick();      // 내 닉네임이 비어있으면 생성
   $("peer-name").textContent = peerNick || "상대방";
   $("peer-profile").textContent = "";   // 상대 연령·성별은 화면에 표시하지 않음(집계는 유지)
   enterChat();
   addSystem((peerNick || "상대방") + "님과 연결되었습니다.");
-  addSystem("👋 가볍게 인사해보세요");
+  addSystem("💡 프로젝트 아이디어를 자유롭게 나눠보세요");
 
   // 내가 접속을 끊으면 상대에게 종료 신호 (삭제가 아니라 표시 → 상대가 읽을 수 있음)
   db.ref("rooms/" + roomId + "/closed").onDisconnect().set(true);
@@ -882,10 +869,7 @@ function firebaseLeave() {
   const rid = state.roomId;
   detachRoom();            // 내 리스너 먼저 해제 (자기 알림 방지)
   state.roomId = null;
-  if (rid) {
-    db.ref("rooms/" + rid + "/closed").set(true);          // 상대에게 종료 전달
-    setTimeout(() => db.ref("rooms/" + rid).remove(), 1500); // 뒤이어 방 삭제(용량 정리)
-  }
+  if (rid) db.ref("rooms/" + rid + "/closed").set(true);   // 상대에게 종료 전달 (로그는 보존)
 }
 
 function firebaseReport(reason) {

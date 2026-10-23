@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
   <link rel="apple-touch-icon" href="icon-180.png">
-  <title>랜덤7942 · 관리자</title>
+  <title>파워닉스 브레인스토밍 · 관리자</title>
   <style>
     :root { --bg:#14161a; --card:#1e2127; --fg:#eceef1; --sub:#9aa1ab; --line:#2c3036;
             --primary:#3b66cf; --danger:#d94848; --ok:#2e9e5b; --warn:#d98a2b; }
@@ -103,7 +103,7 @@
 
   <div id="main">
     <header>
-      <div class="brand"><img src="icon-192.png" alt=""><span>랜덤7942 <b>관리자</b></span></div>
+      <div class="brand"><img src="icon-192.png?v=bs" alt=""><span>파워닉스 <b>관리자</b></span></div>
       <div class="acts">
         <button class="primary" id="btn-refresh">↻ 새로고침</button>
         <button class="ghost" id="btn-logout">로그아웃</button>
@@ -143,12 +143,14 @@
       </div>
 
       <div class="tabs">
-        <button class="tab active" data-tab="users">🚨 신고된 이용자</button>
+        <button class="tab active" data-tab="logs">💬 대화 로그</button>
+        <button class="tab" data-tab="users">🚨 신고된 이용자</button>
         <button class="tab" data-tab="recent">🕑 최근 신고</button>
         <button class="tab" data-tab="stats">📊 사유 통계</button>
         <button class="tab" data-tab="banned">🚫 차단 목록</button>
       </div>
-      <div class="panel active" id="panel-users"></div>
+      <div class="panel active" id="panel-logs"></div>
+      <div class="panel" id="panel-users"></div>
       <div class="panel" id="panel-recent"></div>
       <div class="panel" id="panel-stats"></div>
       <div class="panel" id="panel-banned"></div>
@@ -158,7 +160,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="config.js?v=37"></script>
-  <script src="admin.js?v=37"></script>
+  <script src="config.js?v=38"></script>
+  <script src="admin.js?v=38"></script>
 </body>
 </html>
