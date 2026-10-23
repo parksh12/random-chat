@@ -61,7 +61,9 @@ body {
   padding: 8px 14px; text-align: center; line-height: 1.4;
   padding-left: calc(14px + var(--safe-l)); padding-right: calc(14px + var(--safe-r));
 }
-:root:not([data-theme="light"]) .safety-bar,
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .safety-bar { background: #3a2f1c; color: #e3b667; }
+}
 :root[data-theme="dark"] .safety-bar { background: #3a2f1c; color: #e3b667; }
 
 
@@ -80,7 +82,12 @@ body {
   transition: opacity .25s ease, transform .3s cubic-bezier(.2, .8, .2, 1);
 }
 .notice-toast.show { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
-body[data-screen="chat"] .notice-toast { top: calc(70px + var(--safe-t)); }
+body[data-screen="chat"] .notice-toast { display: none; }   /* 채팅 중엔 안내줄에 표시 */
+#safety-bar.is-notice { background: #eef1fe; color: #3b52c4; font-weight: 600; white-space: pre-wrap; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) #safety-bar.is-notice { background: #232a45; color: #aebcff; }
+}
+:root[data-theme="dark"] #safety-bar.is-notice { background: #232a45; color: #aebcff; }
 .nt-ic {
   flex: none; width: 34px; height: 34px; border-radius: 11px;
   display: grid; place-items: center; color: #fff; background: var(--grad);

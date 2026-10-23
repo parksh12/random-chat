@@ -116,6 +116,12 @@ if (hasFirebase) {
     const n = s.val();
     const bar = document.getElementById("notice-bar");
     if (!bar) return;
+    // 채팅 화면: 상단 안내줄 자리에 공지 표시 (공지 없으면 기본 안내)
+    const sb = document.getElementById("safety-bar");
+    if (sb) {
+      sb.textContent = n && n.text ? "📢 " + n.text : "욕설·비방은 삼가주세요.";
+      sb.classList.toggle("is-notice", !!(n && n.text));
+    }
     let closed = null;
     try { closed = localStorage.getItem(NOTICE_KEY); } catch (e) {}
     if (n && n.text && String(n.ts) !== closed) {
