@@ -462,15 +462,42 @@ $("msg-input").addEventListener("input", () => {
   }
 });
 
+// ---- 링크·전화번호 필터 ----
+function filterText(s) {
+  // URL(http/https/www 또는 도메인.tld)
+  s = s.replace(
+    /((https?:\/\/|www\.)[^\s]+|\b[a-z0-9-]+(\.[a-z0-9-]+)*\.(com|net|org|io|kr|co|me|gg|xyz|tv|ly|link|site|shop|app|biz|info|cc)\b(\/[^\s]*)?)/gi,
+    "[링크 차단]");
+  // 한국 휴대폰 번호
+  s = s.replace(/01[016789][\s.\-]?\d{3,4}[\s.\-]?\d{4}/g, "[번호 차단]");
+  // 연락처로 보이는 9자리 이상 숫자 나열(구분자 포함)
+  s = s.replace(/(?:\d[\s.\-]?){9,}/g, (m) =>
+    (m.replace(/\D/g, "").length >= 9 ? "[번호 차단]" : m));
+  return s;
+}
+
+// ---- 도배 방지 (최근 5초 가중치 합 제한 + 사진 최소 간격) ----
+let _sendStamps = [];
+let _lastPhotoAt = 0;
+function floodBlocked(weight) {
+  const t = now();
+  _sendStamps = _sendStamps.filter((x) => t - x < 5000);
+  if (_sendStamps.length + weight > 8) return true;
+  for (let i = 0; i < weight; i++) _sendStamps.push(t);
+  return false;
+}
+
 // 텍스트 전송
 $("chat-form").addEventListener("submit", (e) => {
   e.preventDefault();
   initAudio();
-  const text = $("msg-input").value.trim();
+  let text = $("msg-input").value.trim();
   if (!text) return;
-  addMsg("mine", text, now());
+  if (floodBlocked(1)) { addSystem("너무 빠르게 보내고 있어요. 잠시 후 다시 보내주세요."); return; }
+  text = filterText(text);
   $("msg-input").value = "";
   _lastTyping = 0; clearMyTyping();
+  addMsg("mine", text, now());
   if (hasFirebase) firebaseSendText(text);
   else setTimeout(() => addMsg("peer", "(데모) 받았어요: " + text, now()), 600);
 });
@@ -480,6 +507,11 @@ $("photo-input").addEventListener("change", (e) => {
   const file = e.target.files[0];
   e.target.value = "";
   if (!file) return;
+  if (now() - _lastPhotoAt < 2000 || floodBlocked(3)) {
+    addSystem("사진을 너무 빠르게 보내고 있어요. 잠시 후 다시 시도하세요.");
+    return;
+  }
+  _lastPhotoAt = now();
   const url = URL.createObjectURL(file);
   const bubble = addImage("mine", url, now());
   if (hasFirebase) {
@@ -699,7 +731,7 @@ function joinRoom(roomId, peerNick, peerUid, peerProfile) {
     if (!msg || msg.sender === uid) return;   // 내 메시지는 이미 표시됨
     showTyping(false);                        // 메시지 왔으니 입력중 표시 제거
     if (msg.type === "photo") addImage("peer", msg.content, msg.ts);
-    else addMsg("peer", msg.text || "", msg.ts);
+    else addMsg("peer", filterText(msg.text || ""), msg.ts);  // 받는 쪽도 필터
     notifyPing();                             // 알림음·진동
   });
 
