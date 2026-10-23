@@ -168,8 +168,10 @@ body.brand-hidden .hero-logo, body.brand-hidden .topbrand { opacity: 0; }
   padding: 16px 14px; display: flex; flex-direction: column; gap: 6px;
   padding-left: calc(14px + var(--safe-l)); padding-right: calc(14px + var(--safe-r));
 }
-/* 대화를 아래부터 쌓이게: 메시지가 적을 땐 이 여백이 커져서 내용을 바닥으로 밀어냄 */
+/* 대화를 아래부터 쌓이게(폰): 메시지가 적을 땐 이 여백이 커져 내용을 바닥으로 밀어냄 */
 .msg-spacer { flex: 1 0 auto; min-height: 0; }
+/* 데스크톱(넓은 화면)에서는 위에서부터 시작 */
+@media (min-width: 768px) { .msg-spacer { display: none; } }
 .msg { max-width: 76%; padding: 10px 14px; border-radius: 20px; line-height: 1.45;
        word-break: break-word; font-size: 15.5px; }
 .msg.mine { align-self: flex-end; background: var(--primary); color: #fff; border-bottom-right-radius: 6px; }

@@ -498,8 +498,13 @@ $("chat-form").addEventListener("submit", (e) => {
   $("msg-input").value = "";
   _lastTyping = 0; clearMyTyping();
   addMsg("mine", text, now());
+  $("msg-input").focus();        // 전송 후 입력창 포커스 유지(키보드 안 닫힘)
   if (hasFirebase) firebaseSendText(text);
   else setTimeout(() => addMsg("peer", "(데모) 받았어요: " + text, now()), 600);
+});
+// 전송 버튼이 입력창 포커스를 빼앗지 않도록 (모바일 키보드 유지)
+document.querySelectorAll(".send-btn").forEach((el) => {
+  el.addEventListener("mousedown", (e) => e.preventDefault());
 });
 
 // 사진 전송
