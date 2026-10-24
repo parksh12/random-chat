@@ -290,11 +290,8 @@ $("btn-loc-skip").addEventListener("click", () => {
   state.locOn = false;
   applyLocUI();
 });
-// 채팅 중 위치 토글
-$("btn-loc-toggle").addEventListener("click", () => {
-  if (state.locOn) disableLocation();
-  else enableLocation();
-});
+// 채팅 중 📍 거리 표시 토글
+$("btn-loc-toggle").addEventListener("click", toggleLocShare);
 
 // 좌표 → 8개 권역 (대략 추정). 서울/경기/인천/강원/충청/전라/경상/제주
 async function regionFromCoords(c) {
@@ -783,6 +780,9 @@ function joinRoom(roomId, peerNick, peerUid, peerProfile) {
   enterChat();
   addSystem((peerNick || "상대방") + "님과 연결되었습니다.");
   addSystem("💡 자유롭게 대화를 나눠보세요.");
+  watchLoc(roomId);
+  if (state.locOn) shareMyLoc();   // 이번 접속에서 이미 켰으면 새 방에도 공유
+  setLocBtn();
 
   // 내가 접속을 끊으면 상대에게 종료 신호 (삭제가 아니라 표시 → 상대가 읽을 수 있음)
   db.ref("rooms/" + roomId + "/closed").onDisconnect().set(true);
@@ -843,10 +843,89 @@ function detachRoom() {
   if (state._closedRef) { state._closedRef.off(); state._closedRef = null; }
   if (state._peerNickRef) { state._peerNickRef.off(); state._peerNickRef = null; }
   if (state._typingRef) { state._typingRef.off(); state._typingRef = null; }
+  if (state._locRef) { state._locRef.off(); state._locRef = null; }
+  if (state.roomId && state.locOn) removeMyLoc();   // 대화 끝나면 내 위치 삭제
   clearTimeout(state._typingHide);
   showTyping(false);
   clearMyTyping();
   if (state.roomId) { db.ref("rooms/" + state.roomId + "/closed").onDisconnect().cancel(); }
+}
+
+// ---- 📍 상대방과의 거리 (실험) ----
+// 정확한 좌표는 저장하지 않음: 약 5km 격자로 뭉갠 값만 방에 공유하고, 대화가 끝나면 삭제
+const LOC_GRID = 0.05;   // 위도 0.05° ≈ 5.5km
+const coarse = (v) => Math.round(v / LOC_GRID) * LOC_GRID;
+let _locConsented = false;
+
+function distKm(a, b) {   // 하버사인 거리
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function setLocBtn() {
+  const b = $("btn-loc-toggle");
+  b.textContent = state.locOn ? "📍 켜짐" : "📍 거리";
+  b.classList.toggle("on", state.locOn);
+}
+function toggleLocShare() {
+  if (state.locOn) {
+    removeMyLoc();
+    state.locOn = false; state.coords = null;
+    setLocBtn();
+    addSystem("📍 위치를 껐어요.");
+    return;
+  }
+  if (!_locConsented &&
+      !confirm("대략적인 위치(약 5km 단위)를 상대방과의 거리 계산에만 사용합니다.\n위치를 켤까요?")) return;
+  _locConsented = true;
+  if (!navigator.geolocation) { addSystem("이 브라우저는 위치 기능을 지원하지 않아요."); return; }
+  navigator.geolocation.getCurrentPosition((pos) => {
+    state.coords = { lat: coarse(pos.coords.latitude), lng: coarse(pos.coords.longitude) };
+    state.locOn = true;
+    setLocBtn();
+    shareMyLoc();
+  }, () => {
+    addSystem("📍 위치 권한이 거부됐어요. 브라우저 설정에서 위치를 허용해 주세요.");
+  }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
+}
+function shareMyLoc() {
+  if (!state.roomId || !state.coords) return;
+  const ref = db.ref("rooms/" + state.roomId + "/loc/" + uid);
+  ref.set(state.coords);
+  ref.onDisconnect().remove();
+}
+function removeMyLoc() {
+  if (!state.roomId) return;
+  const ref = db.ref("rooms/" + state.roomId + "/loc/" + uid);
+  ref.onDisconnect().cancel();
+  ref.remove();
+}
+function watchLoc(roomId) {
+  const ref = db.ref("rooms/" + roomId + "/loc");
+  state._locRef = ref;
+  let shown = null, peerHint = false, mineHint = false;
+  ref.on("value", (snap) => {
+    if (state.roomId !== roomId) return;
+    const v = snap.val() || {};
+    const mine = v[uid];
+    const peerKey = Object.keys(v).find((k) => k !== uid);
+    const peer = peerKey ? v[peerKey] : null;
+    if (mine && peer) {
+      const d = distKm(mine, peer);
+      const text = d < 5 ? "📍 당신과 상대방의 거리는 5km 이내예요! 가까워요"
+                         : "📍 당신과 상대방의 거리는 약 " + Math.round(d) + "km입니다!";
+      if (text !== shown) { shown = text; addSystem(text); }
+    } else if (peer && !peerHint) {
+      peerHint = true;
+      addSystem("📍 상대방이 위치를 켰어요. 위쪽 📍 버튼을 누르면 서로의 거리를 볼 수 있어요.");
+    } else if (mine && !peer && !mineHint) {
+      mineHint = true;
+      addSystem("📍 위치를 켰어요. 상대방도 켜면 거리가 표시돼요.");
+    }
+    if (!mine || !peer) shown = null;
+  });
 }
 
 function firebaseCancelMatching() {
