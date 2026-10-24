@@ -197,6 +197,10 @@ button { font: inherit; border: none; border-radius: 12px; padding: 14px 16px;
   color: var(--fg); cursor: pointer; padding: 4px 10px;
 }
 #screen-chat.active ~ .topbrand { display: none; }
+/* 화면 안에 큰 로고(hero)가 있는 화면에선 상단 로고 중복 숨김 */
+#screen-gate.active ~ .topbrand,
+#screen-consent.active ~ .topbrand,
+#screen-ready.active ~ .topbrand { display: none; }
 /* 로고 탭 → 투명(가리기). 다시 탭하면 보임 */
 .hero-logo, .topbrand { transition: opacity .25s ease; cursor: pointer; }
 body.brand-hidden .hero-logo, body.brand-hidden .topbrand { opacity: 0; }
