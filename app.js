@@ -261,6 +261,7 @@ $("agree-check").addEventListener("change", (e) => {
   $("btn-agree").disabled = !e.target.checked;
 });
 $("btn-agree").addEventListener("click", () => {
+  if ($("loc-agree").checked && !state.locOn) { _locConsented = true; requestLoc(true); }   // 선택 동의 시 위치 미리 받기
   refreshNick();
   applyLocUI();
   show("ready");
@@ -880,14 +881,18 @@ function toggleLocShare() {
   if (!_locConsented &&
       !confirm("대략적인 위치(약 5km 단위)를 상대방과의 거리 계산에만 사용합니다.\n위치를 켤까요?")) return;
   _locConsented = true;
-  if (!navigator.geolocation) { addSystem("이 브라우저는 위치 기능을 지원하지 않아요."); return; }
+  requestLoc(false);
+}
+// quiet: 입장 동의 화면에서 미리 요청할 때(채팅 전이라 안내 생략)
+function requestLoc(quiet) {
+  if (!navigator.geolocation) { if (!quiet) addSystem("이 브라우저는 위치 기능을 지원하지 않아요."); return; }
   navigator.geolocation.getCurrentPosition((pos) => {
     state.coords = { lat: coarse(pos.coords.latitude), lng: coarse(pos.coords.longitude) };
     state.locOn = true;
     setLocBtn();
     shareMyLoc();
   }, () => {
-    addSystem("📍 위치 권한이 거부됐어요. 브라우저 설정에서 위치를 허용해 주세요.");
+    if (!quiet) addSystem("📍 위치 권한이 거부됐어요. 브라우저 설정에서 위치를 허용해 주세요.");
   }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
 }
 function shareMyLoc() {
