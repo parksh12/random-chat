@@ -261,7 +261,7 @@ $("agree-check").addEventListener("change", (e) => {
   $("btn-agree").disabled = !e.target.checked;
 });
 $("btn-agree").addEventListener("click", () => {
-  if ($("loc-agree").checked && !state.locOn) { _locConsented = true; requestLoc(true); }   // 선택 동의 시 위치 미리 받기
+  _locConsented = $("loc-agree").checked;   // 동의만 받고 위치 공유는 기본 꺼짐 (채팅 중 📍 버튼으로 켬)
   refreshNick();
   applyLocUI();
   show("ready");
