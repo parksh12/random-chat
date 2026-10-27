@@ -86,6 +86,34 @@ const ADMIN_UID = "xWHVAy6ZEmOTIDsbpVL0xumHMH33";
 const ADMIN_MODE = new URLSearchParams(location.search).get("admin") === "1";
 const ADMIN_NICK = "관리자001";
 
+// 진단 모드(?debug=1): 기기에서 로그인 단계별 상황을 화면에 표시 (아이폰 등 콘솔을 못 볼 때)
+const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
+const _t0 = Date.now();
+function dbg(msg) {
+  if (!DEBUG) return;
+  let box = document.getElementById("dbg-box");
+  if (!box) {
+    box = document.createElement("pre");
+    box.id = "dbg-box";
+    box.style.cssText = "position:fixed;left:8px;right:8px;bottom:8px;z-index:999;max-height:45vh;overflow:auto;" +
+      "margin:0;padding:10px;background:rgba(0,0,0,.85);color:#9f9;font:11px/1.4 monospace;border-radius:10px;white-space:pre-wrap";
+    document.body.appendChild(box);
+  }
+  box.textContent += "+" + ((Date.now() - _t0) / 1000).toFixed(1) + "s " + msg + "\n";
+}
+if (DEBUG) {
+  dbg("UA " + navigator.userAgent);
+  try { localStorage.setItem("_dbg", "1"); dbg("localStorage OK"); } catch (e) { dbg("localStorage FAIL " + e); }
+  try {
+    const rq = indexedDB.open("_dbg_test");
+    const tm = setTimeout(() => dbg("indexedDB.open: 5초 무응답 (멈춤)"), 5000);
+    rq.onsuccess = () => { clearTimeout(tm); dbg("indexedDB OK"); rq.result.close(); };
+    rq.onerror = () => { clearTimeout(tm); dbg("indexedDB ERROR " + rq.error); };
+  } catch (e) { dbg("indexedDB 없음 " + e); }
+  window.addEventListener("error", (e) => dbg("JS오류 " + e.message));
+  window.addEventListener("unhandledrejection", (e) => dbg("Promise오류 " + (e.reason && (e.reason.code || e.reason.message))));
+}
+
 // ---- Firebase 초기화 ----
 let db = null, auth = null, uid = null;
 if (hasFirebase) {
@@ -94,6 +122,7 @@ if (hasFirebase) {
   db = fbApp.database();
   auth = fbApp.auth();
   auth.onAuthStateChanged((u) => {
+    dbg("auth 상태: " + (u ? "로그인 " + u.uid.slice(0, 6) + (u.isAnonymous ? " (익명)" : "") : "없음"));
     if (ADMIN_MODE && (!u || u.uid !== ADMIN_UID)) {
       alert("관리자 로그인이 필요해요. 관리자 페이지에서 로그인한 뒤 다시 눌러주세요.");
       location.href = "admin.html";
@@ -106,7 +135,9 @@ if (hasFirebase) {
       presenceOn();
     }
   });
-  if (!ADMIN_MODE) auth.signInAnonymously().catch((e) => {
+  dbg("익명 로그인 시도");
+  if (!ADMIN_MODE) auth.signInAnonymously().then(() => dbg("익명 로그인 완료")).catch((e) => {
+    dbg("익명 로그인 실패 " + (e.code || e.message));
     console.error("익명 로그인 실패", e);
     alert("서버 연결에 실패했어요. 잠시 후 새로고침 해주세요.");
   });
