@@ -99,6 +99,7 @@ if (hasFirebase) {
     alert("서버 연결에 실패했어요. 잠시 후 새로고침 해주세요.");
   });
   setInterval(setPresence, 30000);   // 접속 상태 주기적 갱신(집계 정확도)
+  db.ref(".info/serverTimeOffset").on("value", (s) => { _serverSkew = s.val() || 0; });
   // 운영자 공지 배너
   // 닫은 공지는 같은 공지(ts)가 유지되는 동안 다시 띄우지 않음
   const NOTICE_KEY = "rc_notice_closed";
@@ -601,7 +602,10 @@ document.querySelectorAll(".reason").forEach((b) => {
 // ================= Firebase 연동 =================
 // 방 구조: rooms/{roomId} = { members:{uid:{nick,region}}, ts, closed }
 //          rooms/{roomId}/messages/{key} = { sender, type, text|content, ts }
-// 매칭: waiting(한 명 대기) + assign/{uid}(대기자에게 방 배정 통지)
+// 매칭: queue/{uid}(사람별 대기 자리) + assign/{uid}(대기자에게 방 배정 통지)
+
+// 서버 시각 보정 (기기 시계가 틀려도 대기자 신선도 판단이 맞도록)
+let _serverSkew = 0;
 
 function waitForAuth(cb, tries) {
   tries = tries || 0;
@@ -629,31 +633,74 @@ function doMatch() {
   });
 }
 
+// 대기열: queue/{uid} = { nick, ts, claimedBy? } — 사람마다 자기 자리.
+// 남의 자리는 지울 수 없고, claimedBy(데려가기)만 1회, 본인 명의로 표시 가능 (보안 규칙으로 강제)
+const QUEUE_FRESH = 20000;   // 하트비트(5초)가 20초 넘게 끊긴 자리는 유령으로 간주
+const TS = () => firebase.database.ServerValue.TIMESTAMP;
+const myQueueRef = () => db.ref("queue/" + uid);
+
 function doMatchInner() {
-  let claimed = null;
-  const wref = db.ref("waiting");
-  wref.transaction((cur) => {
-    // 살아있는 대기자는 하트비트로 ts를 갱신하므로, 20초 넘게 오래된 것만 '유령'으로 간주
-    if (!cur || cur.uid === uid || now() - cur.ts > 20000) {
-      claimed = null;
-      return { uid: uid, nick: state.nick, region: state.region,
-               age: state.age, gender: state.gender, ts: now() };
-    }
-    claimed = cur;
-    return null;             // 상대를 데려가고 대기열 비움
-  }, (err, committed) => {
-    if (err || !committed) { setTimeout(firebaseStartMatching, 400); return; }
-    if (claimed) {
-      if (claimed.uid === uid) { setTimeout(firebaseStartMatching, 300); return; }  // 자기 자신 방지
-      // 잡은 상대가 차단된 사용자면 무시하고 다시 시도
-      db.ref("banned/" + claimed.uid).once("value", (bs) => {
-        if (bs.val() === true) { setTimeout(firebaseStartMatching, 300); return; }
-        startRoomAsHost(claimed);
+  if (state.roomId) return;
+  // 1) 내 자리를 잠가 남이 동시에 나를 데려가지 못하게 (이미 누가 데려갔으면 배정을 기다림)
+  myQueueRef().child("claimedBy").transaction((cur) => (cur && cur !== uid ? undefined : uid),
+    (err, committed) => {
+      if (err) { setTimeout(firebaseStartMatching, 1000); return; }
+      if (!committed) {
+        // 데려간 사람이 방을 안 만들고 사라졌으면(2번 연속 확인) 잠금을 풀고 다시 대기
+        if ((state._claimedSeen = (state._claimedSeen || 0) + 1) >= 2) {
+          state._claimedSeen = 0;
+          myQueueRef().child("claimedBy").remove();
+        }
+        waitForAssignment();
+        return;
+      }
+      state._claimedSeen = 0;
+      findPeer();
+    });
+}
+
+// 2) 다른 대기자 중 가장 오래 기다린 사람부터 데려가기 시도
+function findPeer() {
+  db.ref("queue").once("value", (snap) => {
+    const t = now() + _serverSkew;
+    const cands = [];
+    snap.forEach((ch) => {
+      const v = ch.val() || {};
+      if (ch.key !== uid && !v.claimedBy && typeof v.nick === "string" && v.ts && t - v.ts < QUEUE_FRESH) {
+        cands.push({ uid: ch.key, nick: v.nick, ts: v.ts });
+      }
+    });
+    cands.sort((a, b) => a.ts - b.ts);
+    tryClaim(cands);
+  }, () => setTimeout(firebaseStartMatching, 1000));
+}
+function tryClaim(cands) {
+  if (state.roomId) return;
+  const c = cands.shift();
+  if (!c) { enterQueue(); return; }      // 아무도 없으면 내가 대기
+  db.ref("banned/" + c.uid).once("value", (bs) => {
+    if (bs.val() === true) { tryClaim(cands); return; }   // 차단된 사용자는 건너뜀
+    db.ref("queue/" + c.uid + "/claimedBy").transaction((cur) => (cur ? undefined : uid),
+      (err, committed) => {
+        if (err || !committed) { tryClaim(cands); return; }   // 다른 사람이 먼저 데려감
+        leaveQueue();
+        startRoomAsHost(c);
       });
-    } else {
-      waitForAssignment();
-    }
   });
+}
+// 3) 내 자리 등록(잠금 해제 = 다시 데려갈 수 있는 상태)
+function enterQueue() {
+  const ref = myQueueRef();
+  ref.set({ nick: state.nick, ts: TS() });
+  ref.onDisconnect().remove();
+  state._inQueue = true;
+  waitForAssignment();
+}
+function leaveQueue() {
+  state._inQueue = false;
+  if (!uid) return;
+  myQueueRef().onDisconnect().cancel();
+  myQueueRef().remove();
 }
 
 function startRoomAsHost(peer) {
@@ -673,13 +720,10 @@ function startRoomAsHost(peer) {
 }
 
 function waitForAssignment() {
-  // 대기 중 연결이 끊기면 대기열에서 자동 제거. 방 배정은 전역 리스너가 처리.
-  const wref = db.ref("waiting");
-  wref.onDisconnect().remove();
-  // 하트비트: 내가 대기자인 동안 ts를 갱신(유령 오인 방지)
+  // 방 배정은 전역 리스너가 처리. 하트비트: 대기 중인 동안 ts 갱신(유령 오인 방지)
   clearInterval(state._waitBeat);
   state._waitBeat = setInterval(() => {
-    wref.transaction((cur) => (cur && cur.uid === uid ? { ...cur, ts: now() } : cur));
+    if (!state.roomId && state._inQueue) myQueueRef().child("ts").set(TS());
   }, 5000);
   // 일정 시간 안에 매칭이 안 되면 재시도. 단, 놓친 배정이 있으면 그걸 먼저 처리(멈춤 복구)
   clearTimeout(state._waitRetry);
@@ -726,7 +770,7 @@ function consumeAssign(v) {
     }
     if (state.roomId || currentScreen !== "waiting") return;
     stopWaitBeat();
-    db.ref("waiting").onDisconnect().cancel();
+    leaveQueue();
     const pm = m[pk];
     joinRoom(v.roomId, pm ? pm.nick : "상대방", pk,
              pm ? profileText(pm.age, pm.gender) : "");
@@ -909,27 +953,32 @@ function watchLoc(roomId) {
 
 function firebaseCancelMatching() {
   stopWaitBeat();
-  // 대기열에서 나를 제거
-  const wref = db.ref("waiting");
-  wref.transaction((cur) => (cur && cur.uid === uid ? null : cur));
-  wref.onDisconnect().cancel();
+  leaveQueue();            // 대기열에서 나를 제거
   detachRoom();
 }
 
-function firebaseSendText(text) {
-  if (!state.roomId) return;
-  db.ref("rooms/" + state.roomId + "/messages").push({
-    sender: uid, type: "text", text: text, ts: now(),
+// 메시지 + 전송 시각(rate/{uid})을 한 번에 기록. 보안 규칙이 서버 시각으로 간격을 검사
+// (글 0.3초, 사진 2초) → 화면을 우회한 도배도 서버에서 거부됨
+function sendMsg(payload, rateKey) {
+  const rid = state.roomId;
+  if (!rid) return Promise.resolve();
+  const key = db.ref("rooms/" + rid + "/messages").push().key;
+  return db.ref().update({
+    ["rooms/" + rid + "/messages/" + key]: { ...payload, sender: uid, ts: TS() },
+    ["rate/" + uid + "/" + rateKey]: TS(),
   });
+}
+
+function firebaseSendText(text) {
+  sendMsg({ type: "text", text: text }, "t")
+    .catch(() => addSystem("⚠ 메시지가 전송되지 않았어요. 잠시 후 다시 보내주세요."));
 }
 
 async function firebaseSendPhoto(file) {
   if (!state.roomId) return;
   try {
     const dataUrl = await compressImage(file);
-    db.ref("rooms/" + state.roomId + "/messages").push({
-      sender: uid, type: "photo", content: dataUrl, ts: now(),
-    });
+    await sendMsg({ type: "photo", content: dataUrl }, "p");
   } catch (e) {
     console.error("사진 전송 실패", e);
     addSystem("사진 전송에 실패했어요.");

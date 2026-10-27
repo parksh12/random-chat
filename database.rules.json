@@ -1,8 +1,29 @@
 {
   "rules": {
     "waiting": {
+      ".read": false,
+      ".write": false
+    },
+    "queue": {
       ".read": "auth != null",
-      ".write": "auth != null && (!newData.exists() || newData.child('uid').val() === auth.uid)"
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        "nick": { ".validate": "newData.isString() && newData.val().length <= 30" },
+        "ts": { ".validate": "newData.isNumber() && newData.val() <= now" },
+        "claimedBy": {
+          ".write": "auth != null && !data.exists() && newData.val() === auth.uid && root.child('queue').child($uid).child('ts').exists()"
+        }
+      }
+    },
+    "rate": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid && newData.exists()",
+        ".validate": "(newData.child('t').exists() || !data.child('t').exists()) && (newData.child('p').exists() || !data.child('p').exists())",
+        "t": { ".validate": "newData.val() === now && (!data.exists() || now >= data.val() + 300)" },
+        "p": { ".validate": "newData.val() === now && (!data.exists() || now >= data.val() + 2000)" },
+        "$other": { ".validate": false }
+      }
     },
     "assign": {
       "$uid": {
@@ -42,7 +63,7 @@
         "messages": {
           "$mid": {
             ".write": "auth != null && !data.exists() && root.child('rooms').child($rid).child('members').child(auth.uid).exists()",
-            ".validate": "newData.child('sender').val() === auth.uid && newData.child('ts').isNumber() && ((newData.child('type').val() === 'text' && newData.child('text').isString() && newData.child('text').val().length <= 2000) || (newData.child('type').val() === 'photo' && newData.child('content').isString() && newData.child('content').val().beginsWith('data:image/') && newData.child('content').val().length <= 1500000))"
+            ".validate": "newData.child('sender').val() === auth.uid && newData.child('ts').val() === now && ((newData.child('type').val() === 'text' && newData.child('text').isString() && newData.child('text').val().length <= 2000 && newData.parent().parent().parent().parent().child('rate').child(auth.uid).child('t').val() === now) || (newData.child('type').val() === 'photo' && newData.child('content').isString() && newData.child('content').val().beginsWith('data:image/') && newData.child('content').val().length <= 1500000 && newData.parent().parent().parent().parent().child('rate').child(auth.uid).child('p').val() === now))"
           }
         }
       }
