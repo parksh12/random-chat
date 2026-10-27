@@ -204,10 +204,11 @@
             if (b2) b2.insertAdjacentHTML("beforeend",
               '<div class="go-row me"><span class="rk">' + (hs.numChildren() + 1) +
               '</span><span class="nm">나 (' + esc(ctx.nick) + ')</span><span class="sc">' + my + "층</span></div>");
-          });
-        });
+          }).catch(() => {});
+        }).catch(() => {});
       }
-    }, () => { const b = box(); if (b) b.innerHTML = '<div class="go-muted">순위표를 불러오지 못했어요.</div>'; });
+    }, () => { const b = box(); if (b) b.innerHTML = '<div class="go-muted">순위표를 불러오지 못했어요.</div>'; })
+      .catch(() => {});
   }
 
   // ---- 열기 / 닫기 ----
