@@ -57,13 +57,15 @@ function alertNewReport() {
 }
 $("btn-logout").addEventListener("click", () => auth.signOut());
 $("btn-refresh").addEventListener("click", () => location.reload());
+// 관리자001로 랜덤채팅 참가: 같은 로그인 세션을 쓰는 메인 사이트를 새 탭으로
+$("btn-join-chat").addEventListener("click", () => window.open("./?admin=1", "_blank"));
 
 auth.onAuthStateChanged((u) => {
   if (u && u.isAnonymous) { auth.signOut(); return; }
   if (u) {
     $("login").style.display = "none";
     $("main").style.display = "block";
-    $("whoami").textContent = (u.email || u.uid) + " · v49";
+    $("whoami").textContent = (u.email || u.uid) + " · v50";
     watchAll();
   } else {
     ["reports", "banned", "rooms", "presence", "config/notice"].forEach((p) => db.ref(p).off());

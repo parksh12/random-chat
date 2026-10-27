@@ -8,7 +8,7 @@
       ".read": "auth != null",
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
-        "nick": { ".validate": "newData.isString() && newData.val().length <= 30" },
+        "nick": { ".validate": "newData.isString() && newData.val().length <= 30 && (!newData.val().beginsWith('관리자') || $uid === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33')" },
         "ts": { ".validate": "newData.isNumber() && newData.val() <= now" },
         "claimedBy": {
           ".write": "auth != null && !data.exists() && newData.val() === auth.uid && root.child('queue').child($uid).child('ts').exists()"
@@ -41,7 +41,7 @@
         "members": {
           "$m": {
             ".write": "auth != null && auth.uid === $m && data.exists() && newData.exists()",
-            "nick": { ".validate": "newData.isString() && newData.val().length <= 30" }
+            "nick": { ".validate": "newData.isString() && newData.val().length <= 30 && (!newData.val().beginsWith('관리자') || $m === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33')" }
           }
         },
         "closed": {

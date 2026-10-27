@@ -80,13 +80,25 @@ function setPresence() {
 
 const hasFirebase = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey);
 
+// 관리자 모드(?admin=1): 관리자 페이지에서 로그인한 세션(같은 이름의 앱 "admin")을 그대로 사용.
+// 실제 관리자 계정일 때만 진입 — 주소만 바꿔서는 관리자 행세 불가 (닉네임도 보안 규칙으로 보호)
+const ADMIN_UID = "xWHVAy6ZEmOTIDsbpVL0xumHMH33";
+const ADMIN_MODE = new URLSearchParams(location.search).get("admin") === "1";
+const ADMIN_NICK = "관리자001";
+
 // ---- Firebase 초기화 ----
 let db = null, auth = null, uid = null;
 if (hasFirebase) {
-  firebase.initializeApp(window.FIREBASE_CONFIG);
-  db = firebase.database();
-  auth = firebase.auth();
+  const fbApp = ADMIN_MODE ? firebase.initializeApp(window.FIREBASE_CONFIG, "admin")
+                           : firebase.initializeApp(window.FIREBASE_CONFIG);
+  db = fbApp.database();
+  auth = fbApp.auth();
   auth.onAuthStateChanged((u) => {
+    if (ADMIN_MODE && (!u || u.uid !== ADMIN_UID)) {
+      alert("관리자 로그인이 필요해요. 관리자 페이지에서 로그인한 뒤 다시 눌러주세요.");
+      location.href = "admin.html";
+      return;
+    }
     if (u) {
       uid = u.uid;
       attachAssignListener();
@@ -94,7 +106,7 @@ if (hasFirebase) {
       presenceOn();
     }
   });
-  auth.signInAnonymously().catch((e) => {
+  if (!ADMIN_MODE) auth.signInAnonymously().catch((e) => {
     console.error("익명 로그인 실패", e);
     alert("서버 연결에 실패했어요. 잠시 후 새로고침 해주세요.");
   });
@@ -169,7 +181,7 @@ function newIdentity() {
 function applyNick(silent) {
   if (!state.nickNum) state.nickNum = makeNum();
   const old = state.nick;
-  state.nick = (state.region || "미정") + state.nickNum;
+  state.nick = ADMIN_MODE ? ADMIN_NICK : (state.region || "미정") + state.nickNum;
   $("nick-preview").textContent = state.nick;
   $("my-name").textContent = state.nick;
   if (hasFirebase && state.roomId && uid) {
@@ -1078,6 +1090,7 @@ document.querySelectorAll(".hero-logo, .topbrand").forEach((el) =>
   el.addEventListener("click", toggleBrand));
 applyBrandHidden();
 
-// 시작: 항상 베타 비번 게이트부터
-show("consent");
+// 시작: 동의 화면부터 (관리자 모드는 바로 입장 준비)
+if (ADMIN_MODE) { refreshNick(); show("ready"); }
+else show("consent");
 if (!hasFirebase) console.info("데모 모드: Firebase 설정이 비어 있습니다. config.js를 채우면 실제로 동작합니다.");
