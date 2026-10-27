@@ -303,6 +303,56 @@ body.brand-hidden .hero-logo, body.brand-hidden .topbrand { opacity: 0; }
           font-size: 14px; padding: 14px 10px; }
 .reason:active { background: var(--peer); }
 .wide { width: 100%; }
+
+/* ---- 대기 중 미니게임: 블록 쌓기 ---- */
+.game-btn {
+  width: 100%; margin: 4px 0 10px; font-weight: 700; font-size: 15px;
+  background: var(--card); color: var(--primary);
+  border: 1.5px solid transparent;
+  background-image: linear-gradient(var(--card), var(--card)), var(--grad);
+  background-origin: border-box; background-clip: padding-box, border-box;
+}
+.game-btn:active { transform: translateY(1px); }
+.game-sheet { padding: 14px 16px; padding-bottom: calc(16px + var(--safe-b)); }
+.game-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.mini-wait { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--sub); min-width: 0; }
+.mini-spin { flex: none; width: 14px; height: 14px; border-radius: 50%;
+             border: 2px solid var(--line); border-top-color: var(--primary); animation: spin .9s linear infinite; }
+.game-x { flex: none; width: 36px; height: 36px; min-height: 36px; padding: 0; border-radius: 10px;
+          display: grid; place-items: center; background: var(--peer); color: var(--sub); }
+.game-stage {
+  position: relative; height: min(58vh, 460px); border-radius: 16px; overflow: hidden;
+  background: var(--bg); touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer;
+}
+#game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.game-score { position: absolute; top: 14px; left: 0; right: 0; text-align: center; pointer-events: none;
+              font-size: 40px; font-weight: 800; letter-spacing: -1px; color: var(--fg); opacity: .9; }
+.game-pop { position: absolute; top: 64px; left: 0; right: 0; text-align: center; pointer-events: none;
+            font-size: 15px; font-weight: 800; color: var(--primary); opacity: 0; }
+.game-pop.show { animation: gpop .8s ease forwards; }
+@keyframes gpop { 0% { opacity: 0; transform: translateY(6px) scale(.9); }
+                  20% { opacity: 1; transform: translateY(0) scale(1.06); }
+                  100% { opacity: 0; transform: translateY(-14px) scale(1); } }
+.game-overlay { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center;
+                justify-content: safe center; gap: 8px; padding: 20px; text-align: center; overflow-y: auto;
+                background: color-mix(in srgb, var(--card) 88%, transparent); backdrop-filter: blur(3px); }
+.game-overlay.show { display: flex; animation: fade .15s ease; }
+.go-title { font-size: 30px; font-weight: 800; letter-spacing: -.5px; }
+.go-sub { font-size: 14px; color: var(--sub); line-height: 1.5; }
+.go-best { font-size: 14px; color: var(--sub); }
+.go-best b { color: var(--fg); }
+.go-new { font-size: 15px; font-weight: 700; color: var(--primary); }
+.go-btn { max-width: 240px; margin: 6px 0 4px; }
+.go-board { width: 100%; max-width: 300px; margin-top: 4px; }
+.go-board-title { font-size: 12px; font-weight: 700; color: var(--sub); margin: 6px 0 6px; text-align: left; }
+.go-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 10px; font-size: 14px; }
+.go-row:nth-child(odd) { background: var(--peer); }
+.go-row .rk { width: 20px; font-weight: 800; color: var(--sub); text-align: right; }
+.go-row .nm { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.go-row .sc { font-weight: 700; }
+.go-row.me { background: color-mix(in srgb, var(--primary) 16%, transparent); }
+.go-row.me .nm { font-weight: 700; color: var(--primary); }
+.go-muted { font-size: 13px; color: var(--sub); padding: 8px 0; }
 @media (max-width: 360px) { .reasons { grid-template-columns: 1fr; } }
 
 /* 사진 전체화면 뷰어 */

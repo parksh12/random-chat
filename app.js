@@ -342,6 +342,12 @@ $("btn-cancel").addEventListener("click", () => {
   cancelMatching();
   show("ready");
 });
+// 대기 중 미니게임 (game.js)
+StackGame.init();
+$("btn-game").addEventListener("click", () => {
+  initAudio();   // 매칭 알림음이 나도록 (모바일은 사용자 터치 후에만 소리 허용)
+  StackGame.open({ db: db, uid: uid, nick: state.nick });
+});
 
 // ---- 3·4단계: 매칭 & 채팅 ----
 function startMatching() {
@@ -365,12 +371,14 @@ function startMatching() {
   }
 }
 function cancelMatching() {
+  StackGame.close("user");
   clearTimeout(state._demoTimer);
   clearTimeout(state._waitHintTimer);
   if (hasFirebase) firebaseCancelMatching();
 }
 function enterChat() {
   clearTimeout(state._waitHintTimer);
+  if (StackGame.isOpen()) { StackGame.close("matched"); notifyPing(); }   // 게임 중 매칭 → 알림 후 채팅으로
   // 이전 대화의 사진 blob URL 정리 (메모리)
   (state._blobUrls || []).forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) {} });
   state._blobUrls = [];

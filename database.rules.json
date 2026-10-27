@@ -91,6 +91,16 @@
       ".read": "auth != null",
       ".write": "auth != null && auth.uid === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33'"
     },
+    "scores": {
+      ".read": "auth != null",
+      "$day": {
+        ".indexOn": ["score"],
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && newData.exists()",
+          ".validate": "$day.matches(/^[0-9]{8}$/) && newData.hasChildren(['nick', 'score', 'ts']) && newData.child('score').isNumber() && newData.child('score').val() >= 1 && newData.child('score').val() <= 500 && (!data.exists() || newData.child('score').val() > data.child('score').val()) && newData.child('ts').val() === now && newData.child('nick').isString() && newData.child('nick').val().length <= 30 && (!newData.child('nick').val().beginsWith('관리자') || $uid === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33')"
+        }
+      }
+    },
     "stats": {
       ".read": false,
       ".write": "auth != null && auth.uid === 'xWHVAy6ZEmOTIDsbpVL0xumHMH33'"

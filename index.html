@@ -34,7 +34,7 @@
   <meta name="twitter:image" content="https://www.random7942.com/og.png?v=r4">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
-  <link rel="stylesheet" href="style.css?v=52">
+  <link rel="stylesheet" href="style.css?v=53">
 </head>
 <body>
   <!-- 운영자 공지 배너 -->
@@ -109,6 +109,7 @@
       <h2>상대를 찾는 중…</h2>
       <p class="wait-count">로고를 터치하면 로고가 사라집니다!</p>
       <p id="wait-hint" class="fine" style="display:none">대화 상대방을 찾고 있습니다.</p>
+      <button id="btn-game" class="game-btn">🎮 기다리는 동안 블록 쌓기</button>
       <button id="btn-cancel" class="secondary">취소</button>
     </div>
   </section>
@@ -162,6 +163,24 @@
     </div>
   </div>
 
+  <!-- 대기 중 미니게임: 블록 쌓기 (game.js) -->
+  <div id="game-modal" class="modal">
+    <div class="sheet game-sheet">
+      <div class="game-head">
+        <div class="mini-wait"><span class="mini-spin"></span>상대 찾는 중… 연결되면 바로 이동해요</div>
+        <button id="game-close" class="game-x" aria-label="게임 닫기">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div id="game-stage" class="game-stage">
+        <canvas id="game-canvas"></canvas>
+        <div id="game-score" class="game-score">0</div>
+        <div id="game-pop" class="game-pop"></div>
+        <div id="game-overlay" class="game-overlay"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 사진 전체화면 뷰어 -->
   <div id="photo-viewer" class="viewer">
     <div class="viewer-bar">
@@ -177,7 +196,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-  <script src="config.js?v=52"></script>
-  <script src="app.js?v=52"></script>
+  <script src="config.js?v=53"></script>
+  <script src="game.js?v=53"></script>
+  <script src="app.js?v=53"></script>
 </body>
 </html>
