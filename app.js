@@ -650,10 +650,21 @@ document.querySelectorAll(".reason").forEach((b) => {
 // 서버 시각 보정 (기기 시계가 틀려도 대기자 신선도 판단이 맞도록)
 let _serverSkew = 0;
 
+// 로그인 대기: 모바일(특히 아이폰)이 백그라운드에서 막 깨어나면 로그인이 늦을 수 있어
+// 5초·12초에 익명 로그인을 다시 시도하고, 25초가 지나도 안 되면 그때 안내
 function waitForAuth(cb, tries) {
   tries = tries || 0;
   if (uid) return cb();
-  if (tries > 100) { alert("서버 연결이 지연되고 있어요. 새로고침 해주세요."); show("ready"); return; }
+  if (currentScreen !== "waiting") return;           // 그 사이 취소했으면 중단
+  if ((tries === 50 || tries === 120) && !ADMIN_MODE) {
+    dbg("로그인 지연 → 재시도");
+    auth.signInAnonymously().catch((e) => dbg("재시도 실패 " + (e.code || e.message)));
+  }
+  if (tries > 250) {
+    alert("서버 연결이 지연되고 있어요. 네트워크를 확인하고 새로고침 해주세요.");
+    show("ready");
+    return;
+  }
   setTimeout(() => waitForAuth(cb, tries + 1), 100);
 }
 
