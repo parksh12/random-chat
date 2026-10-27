@@ -11,6 +11,8 @@ const app = firebase.initializeApp(window.FIREBASE_CONFIG, "admin");
 const auth = app.auth();
 const db = app.database();
 const now = () => Date.now();
+// 사진은 data:image/ 만 표시 (외부 URL로 관리자 IP 노출 방지)
+const isImg = (s) => typeof s === "string" && s.startsWith("data:image/");
 
 let allReports = [];     // {key, ...report}
 let bannedSet = {};      // uid -> true
@@ -61,7 +63,7 @@ auth.onAuthStateChanged((u) => {
   if (u) {
     $("login").style.display = "none";
     $("main").style.display = "block";
-    $("whoami").textContent = (u.email || u.uid) + " · v48";
+    $("whoami").textContent = (u.email || u.uid) + " · v49";
     watchAll();
   } else {
     ["reports", "banned", "rooms", "presence", "config/notice"].forEach((p) => db.ref(p).off());
@@ -455,7 +457,7 @@ function renderRoomMsgs(members, msgs) {
     const b = document.createElement("div");
     b.className = "bubble " + (m.sender === firstUid ? "rep" : "oth");
     const nick = (members[m.sender] || {}).nick || "익명";
-    if (m.type === "photo") {
+    if (m.type === "photo" && isImg(m.content)) {
       const cap = document.createElement("div"); cap.className = "mono"; cap.textContent = nick;
       const img = document.createElement("img"); img.src = m.content;
       b.appendChild(cap); b.appendChild(img);
@@ -514,7 +516,7 @@ function renderLog(r) {
   msgs.forEach((m) => {
     const b = document.createElement("div");
     b.className = "bubble " + (m.sender === r.reporter ? "rep" : "oth");
-    if (m.type === "photo") {
+    if (m.type === "photo" && isImg(m.content)) {
       const img = document.createElement("img"); img.src = m.content; b.appendChild(img);
     } else { b.textContent = m.text || ""; }
     wrap.appendChild(b);

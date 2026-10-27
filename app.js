@@ -37,8 +37,8 @@ function toggleTheme() {
   const b = $(id); if (b) b.addEventListener("click", toggleTheme);
 });
 
-const screens = ["gate", "consent", "ready", "waiting", "chat"];
-let currentScreen = "gate";
+const screens = ["consent", "ready", "waiting", "chat"];
+let currentScreen = "consent";
 function show(name) {
   currentScreen = name;
   document.body.dataset.screen = name;   // 공지 카드 위치(채팅 중엔 헤더 아래)
@@ -47,22 +47,13 @@ function show(name) {
 }
 
 // 접속 카운터 + 앱 종료/백그라운드 시 정리
-let _counted = false;
 function presenceOn() {
   if (!hasFirebase || !uid) return;
   setPresence();
-  const cref = db.ref("stats/online");
-  const inc = firebase.database.ServerValue.increment;
-  cref.onDisconnect().set(inc(-1));        // 끊기면 -1 (재무장)
-  if (!_counted) { cref.set(inc(1)); _counted = true; }
 }
 function presenceOff() {
   if (!hasFirebase || !uid) return;
   try { db.ref("presence/" + uid).remove(); } catch (e) {}
-  const cref = db.ref("stats/online");
-  const inc = firebase.database.ServerValue.increment;
-  cref.onDisconnect().cancel();             // 중복 감소 방지
-  if (_counted) { cref.set(inc(-1)); _counted = false; }
   // 대화 중이었으면 상대에게 종료 전달
   if (state.roomId) { try { db.ref("rooms/" + state.roomId + "/closed").set(true); } catch (e) {} }
 }
@@ -241,20 +232,6 @@ function disableLocation() {
 function applyLocUI() {
   // 브레인스토밍 모드: 위치 기능 사용 안 함 (UI 숨김)
 }
-
-// ---- 0단계: 베타 비밀번호 게이트 (매번 입력) ----
-const BETA_PW = "1234";
-function tryGate() {
-  if ($("gate-pw").value === BETA_PW) {
-    $("gate-pw").value = "";
-    show("consent");
-  } else {
-    $("gate-msg").textContent = "비밀번호가 올바르지 않습니다.";
-    $("gate-pw").value = "";
-  }
-}
-$("btn-gate").addEventListener("click", tryGate);
-$("gate-pw").addEventListener("keydown", (e) => { if (e.key === "Enter") tryGate(); });
 
 // ---- 1단계: 동의 ----
 $("agree-check").addEventListener("change", (e) => {
@@ -724,8 +701,8 @@ function stopWaitBeat() {
   state._waitRetry = null;
 }
 
-// 전역 배정 리스너: 일반 매칭과 관리자의 '특정인 지정'을 모두 처리.
-// 대화 중이어도 새 방이 배정되면(관리자 강제 연결) 현재 대화를 종료하고 이동.
+// 전역 배정 리스너: 매칭 대기 중일 때만 배정을 받음
+// (대화 중 강제 배정으로 남의 대화를 끊고 끌고 가는 것 방지)
 let _assignAttached = false;
 function attachAssignListener() {
   if (_assignAttached || !uid) return;
@@ -737,22 +714,17 @@ function attachAssignListener() {
 function consumeAssign(v) {
   if (!v || !v.roomId || v.roomId === state.roomId) return;
   db.ref("assign/" + uid).remove();
+  if (state.roomId || currentScreen !== "waiting") return;
   db.ref("rooms/" + v.roomId).once("value", (rs) => {
     const room = rs.val();
     if (!room || room.closed) return;      // 이미 사라진/닫힌 방이면 무시
     const m = room.members || {};
     const pk = Object.keys(m).find((k) => k !== uid);
     if (!pk) {                             // 상대가 없는(자기 자신/빈) 방 → 무시하고 재매칭
-      db.ref("rooms/" + v.roomId).remove();
       if (!state.roomId) setTimeout(firebaseStartMatching, 300);
       return;
     }
-    if (state.roomId) {                    // 대화 중이면 현재 방 종료(상대에게 알림, 로그는 보존)
-      const old = state.roomId;
-      detachRoom();
-      state.roomId = null;
-      db.ref("rooms/" + old + "/closed").set(true);
-    }
+    if (state.roomId || currentScreen !== "waiting") return;
     stopWaitBeat();
     db.ref("waiting").onDisconnect().cancel();
     const pm = m[pk];
@@ -795,7 +767,9 @@ function joinRoom(roomId, peerNick, peerUid, peerProfile) {
     const msg = snap.val();
     if (!msg || msg.sender === uid) return;   // 내 메시지는 이미 표시됨
     showTyping(false);                        // 메시지 왔으니 입력중 표시 제거
-    if (msg.type === "photo") addImage("peer", msg.content, msg.ts);
+    if (msg.type === "photo") {
+      if (typeof msg.content === "string" && msg.content.startsWith("data:image/")) addImage("peer", msg.content, msg.ts);
+    }
     else addMsg("peer", filterText(msg.text || ""), msg.ts);  // 받는 쪽도 필터
     notifyPing();                             // 알림음·진동
   });
@@ -1056,5 +1030,5 @@ document.querySelectorAll(".hero-logo, .topbrand").forEach((el) =>
 applyBrandHidden();
 
 // 시작: 항상 베타 비번 게이트부터
-show("gate");
+show("consent");
 if (!hasFirebase) console.info("데모 모드: Firebase 설정이 비어 있습니다. config.js를 채우면 실제로 동작합니다.");
