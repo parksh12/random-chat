@@ -1,7 +1,7 @@
 {
   "name": "랜덤7942",
   "short_name": "랜덤7942",
-  "description": "익명으로 프로젝트 아이디어를 가감없이 나눠요",
+  "description": "낯선 누군가와 익명 1:1로 아이디어를 나눠요",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
