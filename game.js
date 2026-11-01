@@ -13,7 +13,9 @@
   let stack, cur, pieces, score, combo, camY, over, playing, raf = 0, lastT = 0, baseW, flash;
 
   const dayKey = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10).replace(/-/g, "");
-  const hue = (i) => (229 + i * 7) % 360;
+  // 블록 색: 펭귄 툴즈 오방색 순환 (화면 표시 전용, P2-18)
+  const PAL = ["#2346d8", "#e5372b", "#ffc21a", "#1e9e5a", "#ffffff"];
+  const hue = (i) => i;
   const best = () => { try { return +localStorage.getItem(BEST_KEY) || 0; } catch (e) { return 0; } };
   const setBest = (v) => { try { localStorage.setItem(BEST_KEY, String(v)); } catch (e) {} };
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -96,23 +98,17 @@
   }
 
   function block(x, y, w, h, a) {
-    const r = Math.min(6, w / 2);
+    const r = Math.min(4, w / 2);
     g.globalAlpha = a == null ? 1 : Math.max(0, a);
-    g.fillStyle = `hsl(${h} 78% 64%)`;
-    g.beginPath(); g.roundRect(x, y, w, BH - 2, r); g.fill();
-    g.fillStyle = `hsl(${h} 90% 76%)`;              // 윗면 하이라이트(입체감)
-    g.beginPath(); g.roundRect(x + 2, y + 2, Math.max(0, w - 4), 5, 3); g.fill();
+    g.fillStyle = PAL[h % PAL.length];               // 면 색 + 두꺼운 검은 테두리
+    g.strokeStyle = "#141414"; g.lineWidth = 2;
+    g.beginPath(); g.roundRect(x + 1, y + 1, Math.max(0, w - 2), BH - 3, r); g.fill(); g.stroke();
     g.globalAlpha = 1;
   }
 
   function draw() {
     g.clearRect(0, 0, W, H);
-    // 높이 올라갈수록 배경이 아주 살짝 바뀜
-    const tint = Math.min(score / 60, 1);
-    const sky = g.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, `hsla(${250 + tint * 40} 80% 65% / ${0.10 + tint * 0.12})`);
-    sky.addColorStop(1, "hsla(229 80% 65% / 0.02)");
-    g.fillStyle = sky; g.fillRect(0, 0, W, H);
+    // 배경은 CSS(.game-stage) 단색. 그라데이션 없음 (P2-18)
     if (flash > 0) { g.fillStyle = `rgba(255,255,255,${flash * 0.18})`; g.fillRect(0, 0, W, H); }
 
     stack.forEach((b, i) => {
@@ -158,7 +154,7 @@
     submit(score);
     overlay(
       '<div class="go-title">' + score + '층</div>' +
-      (isNew && score > 0 ? '<div class="go-new">🎉 최고 기록 갱신!</div>'
+      (isNew && score > 0 ? '<div class="go-new">최고 기록 갱신!</div>'
                           : '<div class="go-best">내 최고 기록 <b>' + Math.max(prevBest, score) + '층</b></div>') +
       '<button class="primary go-btn" data-act="start">다시 하기</button>' +
       '<div class="go-board" id="go-board"><div class="go-muted">순위 불러오는 중…</div></div>'
