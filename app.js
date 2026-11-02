@@ -598,6 +598,11 @@ $("photo-input").addEventListener("change", (e) => {
   const file = e.target.files[0];
   e.target.value = "";
   if (!file) return;
+  // 사진 꾸미기 시트(photobooth.js) → 보내기를 누르면 아래 기존 전송으로
+  if (window.PhotoBooth) PhotoBooth.open(file, sendPhotoFile, { filter: filterText });
+  else sendPhotoFile(file);
+});
+function sendPhotoFile(file) {
   if (now() - _lastPhotoAt < 2000 || floodBlocked(3)) {
     floodWarn("사진을 너무 빠르게 보내고 있어요. 잠시 후 다시 시도하세요.");
     return;
@@ -618,7 +623,7 @@ $("photo-input").addEventListener("change", (e) => {
       clearMyTyping();
     });
   }
-});
+}
 
 // 나가기 = 현재 대화 종료 후 바로 다음 상대 매칭
 $("btn-leave").addEventListener("click", nextPartner);
@@ -1040,7 +1045,7 @@ function firebaseSendText(text) {
 async function firebaseSendPhoto(file) {
   if (!state.roomId) return;
   try {
-    const dataUrl = await compressImage(file);
+    const dataUrl = file.pbDataUrl || await compressImage(file);   // 꾸민 사진은 이미 1.4MB 이하 JPEG
     await sendMsg({ type: "photo", content: dataUrl }, "p");
   } catch (e) {
     console.error("사진 전송 실패", e);

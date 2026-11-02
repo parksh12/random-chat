@@ -440,3 +440,24 @@ body.brand-hidden .hero-logo, body.brand-hidden .topbrand { opacity: 0; }
 /* 성인 확인(필수) 체크 강조 */
 .agree-adult { background: var(--hwang, #ffc21a); border: 2.5px solid #141414; border-radius: 12px; padding: 10px 12px; }
 .agree-adult span { color: #141414; }
+
+/* ---- 사진 꾸미기 시트 (photobooth.js, P2-40) ---- */
+.pb-sheet { max-width: 520px; padding: 14px 16px; padding-bottom: calc(16px + var(--safe-b));
+            max-height: 100dvh; overflow-y: auto; }
+.pb-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.pb-head h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: 22px; letter-spacing: 0; }
+.pb-stage { display: grid; place-items: center; background: var(--soft); border: var(--bd); border-radius: 14px;
+            height: min(46dvh, 420px); padding: 10px; touch-action: none; user-select: none; -webkit-user-select: none;
+            cursor: grab; overflow: hidden; }
+.pb-stage:active { cursor: grabbing; }
+#pb-canvas { max-width: 100%; max-height: calc(min(46dvh, 420px) - 24px); width: auto; height: auto; display: block; border-radius: 4px; }
+.pb-hint { text-align: center; font-size: 12px; margin: 6px 0 8px; }
+.pb-frames { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; }
+.pb-frames::-webkit-scrollbar { display: none; }
+.pb-frame { flex: none; min-height: 40px; padding: 0 12px; border-radius: 8px; border: 2px solid var(--line);
+            background: var(--card); color: var(--fg); font-size: 14px; font-weight: 700; white-space: nowrap; }
+.pb-frame.on { background: var(--cheong); color: #fff; box-shadow: 2px 2px 0 var(--shadow); }
+.pb-memo { width: 100%; margin: 2px 0 10px; font: inherit; font-size: 16px; padding: 10px 12px;
+           border: 2px solid var(--line); border-radius: 10px; background: var(--card); color: var(--fg); }
+.pb-memo:focus { outline: 3px solid var(--hwang); outline-offset: 1px; }
+.pb-acts { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
