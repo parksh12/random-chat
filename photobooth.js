@@ -107,7 +107,6 @@
   const p2 = (n) => String(n).padStart(2, "0");
   const MON = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
   const ymd = (d) => d.getFullYear() + "." + p2(d.getMonth() + 1) + "." + p2(d.getDate());
-  const hm = (d) => p2(d.getHours()) + ":" + p2(d.getMinutes());
 
   // ---------- 프레임 1: 2005 디카 ----------
   function drawDika(g, img, d) {
@@ -168,7 +167,7 @@
     g.fillStyle = "#fff"; for (let i = 0; i < 3; i++) g.fillRect(PX + PW - 95 + i * 18, PY + 27, 14, 16);
     const fc = (x, y, sx, sy) => { g.fillStyle = "#fff"; g.fillRect(x, y, 30 * sx, 5 * sy); g.fillRect(x, y, 5 * sx, 30 * sy); };
     fc(PX + 40, PY + 84, 1, 1); fc(PX + PW - 40, PY + 84, -1, 1); fc(PX + 40, PY + PH - 84, 1, -1); fc(PX + PW - 40, PY + PH - 84, -1, -1);
-    pixText(g, ymd(d) + " " + hm(d), PX + PW - 22, PY + PH - 46, 4, "#fff", sh, "right");
+    pixText(g, ymd(d), PX + PW - 22, PY + PH - 46, 4, "#fff", sh, "right");
     // 오른쪽 버튼들
     const pill = (x, y, w, h) => { g.fillStyle = ol; rr(g, x, y, w, h, h / 2); g.fill();
       g.fillStyle = "#b9a6ec"; rr(g, x + 4, y + 4, w - 8, h - 8, (h - 8) / 2); g.fill();
@@ -267,9 +266,7 @@
     g.fillStyle = "#222"; g.fillRect(W - 150, 66, 84, 32);
     g.fillStyle = "#fff"; for (let i = 0; i < 3; i++) g.fillRect(W - 146 + i * 27, 70, 22, 24);
     // 타임코드·날짜
-    pixText(g, "0:00:" + p2(d.getSeconds()) + ":" + p2((d.getMilliseconds() / 40) | 0), 60, H - 102, 5, "#fff", sh);
-    const h12 = d.getHours() % 12 || 12;
-    pixText(g, (d.getHours() < 12 ? "AM " : "PM ") + h12 + ":" + p2(d.getMinutes()), W - 60, H - 160, px, "#fff", sh, "right");
+    pixText(g, "0:00:07:12", 60, H - 102, 5, "#fff", sh);
     pixText(g, MON[d.getMonth()] + "." + p2(d.getDate()) + " " + d.getFullYear(), W - 60, H - 102, px, "#fff", sh, "right");
     // 가운데 초점 괄호
     g.fillStyle = "rgba(255,255,255,.85)";
