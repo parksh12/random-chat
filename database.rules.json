@@ -1,5 +1,180 @@
 {
   "rules": {
+    "pt": {
+      "board": {
+        ".read": true,
+        "stack": {
+          "all": {
+            ".indexOn": [
+              "s"
+            ],
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && newData.exists()",
+              ".validate": "newData.hasChildren(['n', 's', 'ts']) && newData.child('n').isString() && newData.child('n').val().length >= 1 && newData.child('n').val().length <= 10 && newData.child('s').isNumber() && newData.child('s').val() >= 1 && newData.child('s').val() <= 2000 && newData.child('ts').val() === now && (!data.exists() || newData.child('s').val() > data.child('s').val()) && newData.parent().parent().parent().parent().child('last').child($uid).val() === now",
+              "n": {
+                ".validate": true
+              },
+              "s": {
+                ".validate": true
+              },
+              "ts": {
+                ".validate": true
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "week": {
+            "$wk": {
+              ".validate": "$wk.matches(/^[0-9]{8}$/)",
+              ".indexOn": [
+                "s"
+              ],
+              "$uid": {
+                ".write": "auth != null && auth.uid === $uid && newData.exists()",
+                ".validate": "newData.hasChildren(['n', 's', 'ts']) && newData.child('n').isString() && newData.child('n').val().length >= 1 && newData.child('n').val().length <= 10 && newData.child('s').isNumber() && newData.child('s').val() >= 1 && newData.child('s').val() <= 2000 && newData.child('ts').val() === now && (!data.exists() || newData.child('s').val() > data.child('s').val()) && newData.parent().parent().parent().parent().parent().child('last').child($uid).val() === now",
+                "n": {
+                  ".validate": true
+                },
+                "s": {
+                  ".validate": true
+                },
+                "ts": {
+                  ".validate": true
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            }
+          }
+        },
+        "reaction": {
+          "all": {
+            ".indexOn": [
+              "s"
+            ],
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && newData.exists()",
+              ".validate": "newData.hasChildren(['n', 's', 'ts']) && newData.child('n').isString() && newData.child('n').val().length >= 1 && newData.child('n').val().length <= 10 && newData.child('s').isNumber() && newData.child('s').val() >= 80 && newData.child('s').val() <= 2000 && newData.child('ts').val() === now && (!data.exists() || newData.child('s').val() < data.child('s').val()) && newData.parent().parent().parent().parent().child('last').child($uid).val() === now",
+              "n": {
+                ".validate": true
+              },
+              "s": {
+                ".validate": true
+              },
+              "ts": {
+                ".validate": true
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "week": {
+            "$wk": {
+              ".validate": "$wk.matches(/^[0-9]{8}$/)",
+              ".indexOn": [
+                "s"
+              ],
+              "$uid": {
+                ".write": "auth != null && auth.uid === $uid && newData.exists()",
+                ".validate": "newData.hasChildren(['n', 's', 'ts']) && newData.child('n').isString() && newData.child('n').val().length >= 1 && newData.child('n').val().length <= 10 && newData.child('s').isNumber() && newData.child('s').val() >= 80 && newData.child('s').val() <= 2000 && newData.child('ts').val() === now && (!data.exists() || newData.child('s').val() < data.child('s').val()) && newData.parent().parent().parent().parent().parent().child('last').child($uid).val() === now",
+                "n": {
+                  ".validate": true
+                },
+                "s": {
+                  ".validate": true
+                },
+                "ts": {
+                  ".validate": true
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            }
+          }
+        },
+        "hell": {
+          "all": {
+            ".indexOn": [
+              "s"
+            ],
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && newData.exists()",
+              ".validate": "newData.hasChildren(['n', 's', 'ts']) && newData.child('n').isString() && newData.child('n').val().length >= 1 && newData.child('n').val().length <= 10 && newData.child('s').isNumber() && ((newData.child('s').val() >= 1 && newData.child('s').val() <= 31) || (newData.child('s').val() >= 900000 && newData.child('s').val() <= 1000000)) && newData.child('ts').val() === now && (!data.exists() || newData.child('s').val() > data.child('s').val()) && newData.parent().parent().parent().parent().child('last').child($uid).val() === now",
+              "n": {
+                ".validate": true
+              },
+              "s": {
+                ".validate": true
+              },
+              "ts": {
+                ".validate": true
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        },
+        "chosun": {
+          "all": {
+            ".indexOn": [
+              "s"
+            ],
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && newData.exists()",
+              ".validate": "newData.hasChildren(['n', 's', 'ts']) && newData.child('n').isString() && newData.child('n').val().length >= 1 && newData.child('n').val().length <= 10 && newData.child('s').isNumber() && newData.child('s').val() >= 0 && newData.child('s').val() <= 8100000000 && newData.child('ts').val() === now && (!data.exists() || newData.child('s').val() > data.child('s').val()) && newData.parent().parent().parent().parent().child('last').child($uid).val() === now",
+              "n": {
+                ".validate": true
+              },
+              "s": {
+                ".validate": true
+              },
+              "ts": {
+                ".validate": true
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        },
+        "rpg": {
+          "all": {
+            ".indexOn": [
+              "s"
+            ],
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && newData.exists()",
+              ".validate": "newData.hasChildren(['n', 's', 'ts']) && newData.child('n').isString() && newData.child('n').val().length >= 1 && newData.child('n').val().length <= 10 && newData.child('s').isNumber() && newData.child('s').val() >= 900 && newData.child('s').val() <= 360000 && newData.child('ts').val() === now && (!data.exists() || newData.child('s').val() < data.child('s').val()) && newData.parent().parent().parent().parent().child('last').child($uid).val() === now",
+              "n": {
+                ".validate": true
+              },
+              "s": {
+                ".validate": true
+              },
+              "ts": {
+                ".validate": true
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        }
+      },
+      "last": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid && newData.exists()",
+          ".validate": "newData.isNumber() && newData.val() === now && (!data.exists() || now >= data.val() + 10000)"
+        }
+      }
+    },
     "waiting": {
       ".read": false,
       ".write": false
