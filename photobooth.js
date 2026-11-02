@@ -105,10 +105,8 @@
   }
   function seeded(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
   const p2 = (n) => String(n).padStart(2, "0");
-  const MON = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-  const ymd = (d) => d.getFullYear() + "." + p2(d.getMonth() + 1) + "." + p2(d.getDate());
 
-  // ---------- 프레임 1: 2005 디카 ----------
+  // ---------- 프레임 1: 디카 ----------
   function drawDika(g, img, d) {
     const W = 1080, H = 810;
     // 하늘: 계단식 파스텔 띠(픽셀 느낌)
@@ -167,7 +165,6 @@
     g.fillStyle = "#fff"; for (let i = 0; i < 3; i++) g.fillRect(PX + PW - 95 + i * 18, PY + 27, 14, 16);
     const fc = (x, y, sx, sy) => { g.fillStyle = "#fff"; g.fillRect(x, y, 30 * sx, 5 * sy); g.fillRect(x, y, 5 * sx, 30 * sy); };
     fc(PX + 40, PY + 84, 1, 1); fc(PX + PW - 40, PY + 84, -1, 1); fc(PX + 40, PY + PH - 84, 1, -1); fc(PX + PW - 40, PY + PH - 84, -1, -1);
-    pixText(g, ymd(d), PX + PW - 22, PY + PH - 46, 4, "#fff", sh, "right");
     // 오른쪽 버튼들
     const pill = (x, y, w, h) => { g.fillStyle = ol; rr(g, x, y, w, h, h / 2); g.fill();
       g.fillStyle = "#b9a6ec"; rr(g, x + 4, y + 4, w - 8, h - 8, (h - 8) / 2); g.fill();
@@ -216,8 +213,7 @@
       pixText(g, String(i + 1) + "A", side - 4, y + ch + 2, 1.5, "#ff8a3d", null, "left");
     }
     const by = top + 4 * ch + 3 * gap;
-    pixText(g, ymd(d), W / 2, by + 30, 4, "#ffc21a", null, "center");
-    pixText(g, "FILM", W / 2, by + 78, 2, "#8a8780", null, "center");
+    pixText(g, "FILM", W / 2, by + 50, 2, "#8a8780", null, "center");
     return { W, H };
   }
 
@@ -235,7 +231,6 @@
     }
     g.fillStyle = "#8a8780"; g.textAlign = "right";
     g.font = '600 26px "Pretendard","Pretendard Variable","Apple SD Gothic Neo","Malgun Gothic",sans-serif';
-    g.fillText(ymd(d), W - m, H - 44);
     g.textAlign = "left";
     return { W, H };
   }
@@ -267,7 +262,6 @@
     g.fillStyle = "#fff"; for (let i = 0; i < 3; i++) g.fillRect(W - 146 + i * 27, 70, 22, 24);
     // 타임코드·날짜
     pixText(g, "0:00:07:12", 60, H - 102, 5, "#fff", sh);
-    pixText(g, MON[d.getMonth()] + "." + p2(d.getDate()) + " " + d.getFullYear(), W - 60, H - 102, px, "#fff", sh, "right");
     // 가운데 초점 괄호
     g.fillStyle = "rgba(255,255,255,.85)";
     const b = (x, y, sx, sy) => { g.fillRect(x, y, 34 * sx, 4 * sy); g.fillRect(x, y, 4 * sx, 34 * sy); };
@@ -277,7 +271,7 @@
 
   const FRAMES = [
     { id: "none", name: "프레임 없이" },
-    { id: "dika", name: "2005 디카", draw: drawDika, size: [1080, 810] },
+    { id: "dika", name: "디카", draw: drawDika, size: [1080, 810] },
     { id: "film", name: "네컷 필름", draw: drawFilm, size: [388, 1080] },
     { id: "polaroid", name: "폴라로이드", draw: drawPolaroid, size: [888, 1080] },
     { id: "rec", name: "캠코더 REC", draw: drawRec, size: [1080, 810] },
