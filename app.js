@@ -278,9 +278,10 @@ function applyLocUI() {
 }
 
 // ---- 1단계: 동의 ----
-$("agree-check").addEventListener("change", (e) => {
-  $("btn-agree").disabled = !e.target.checked;
-});
+// 입장 조건: 성인 확인(만 19세 이상, 이용약관의 이용 자격과 같음) + 기록 동의 둘 다 체크해야 함
+const syncAgree = () => { $("btn-agree").disabled = !($("agree-check").checked && $("adult-check").checked); };
+$("agree-check").addEventListener("change", syncAgree);
+$("adult-check").addEventListener("change", syncAgree);
 $("btn-agree").addEventListener("click", () => {
   _locConsented = $("loc-agree").checked;   // 동의만 받고 위치 공유는 기본 꺼짐 (채팅 중 📍 버튼으로 켬)
   refreshNick();

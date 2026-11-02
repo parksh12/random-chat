@@ -436,3 +436,7 @@ body.brand-hidden .hero-logo, body.brand-hidden .topbrand { opacity: 0; }
   .chip-btn { padding: 0 7px; }
   .next-btn { padding: 0 11px; }
 }
+
+/* 성인 확인(필수) 체크 강조 */
+.agree-adult { background: var(--hwang, #ffc21a); border: 2.5px solid #141414; border-radius: 12px; padding: 10px 12px; }
+.agree-adult span { color: #141414; }
