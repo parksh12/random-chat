@@ -36,7 +36,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap">
-  <link rel="stylesheet" href="style.css?v=56">
+  <link rel="stylesheet" href="style.css?v=57">
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5127178209204980" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -59,7 +59,7 @@
     <div class="card">
       <div class="hero">
         <div class="hero-logo"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="28" fill="#141414"/><path d="M32 20.5c-4-7-19-7-20.5 6C10 40 18.5 53 32 53s22-13 20.5-26.5C51 13.5 36 13.5 32 20.5z" fill="#fff"/><ellipse cx="23.5" cy="33" rx="3.2" ry="4" fill="#141414"/><ellipse cx="40.5" cy="33" rx="3.2" ry="4" fill="#141414"/><circle cx="24.6" cy="31.6" r="1.1" fill="#fff"/><circle cx="41.6" cy="31.6" r="1.1" fill="#fff"/><path d="M28.6 39.5h6.8l-3.4 4.4z" fill="#ffc21a" stroke="#141414" stroke-width="1.6" stroke-linejoin="round"/><circle cx="18" cy="41" r="2.8" fill="#e5372b" opacity=".4"/><circle cx="46" cy="41" r="2.8" fill="#e5372b" opacity=".4"/></svg><span>랜덤<span class="brand-num">7942</span></span></div>
-        <div><span class="family-badge">펭귄 툴즈 패밀리</span></div>
+        <div><a class="family-badge" href="https://penguintools.kr/" target="_blank" rel="noopener" title="펭귄 툴즈로 이동">펭귄 툴즈 패밀리 ›</a></div>
         <div class="hero-tag">브레인스토밍 · 익명 아이디어</div>
       </div>
       <div class="notice">
@@ -98,7 +98,7 @@
     <div class="card center">
       <div class="hero">
         <div class="hero-logo"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="28" fill="#141414"/><path d="M32 20.5c-4-7-19-7-20.5 6C10 40 18.5 53 32 53s22-13 20.5-26.5C51 13.5 36 13.5 32 20.5z" fill="#fff"/><ellipse cx="23.5" cy="33" rx="3.2" ry="4" fill="#141414"/><ellipse cx="40.5" cy="33" rx="3.2" ry="4" fill="#141414"/><circle cx="24.6" cy="31.6" r="1.1" fill="#fff"/><circle cx="41.6" cy="31.6" r="1.1" fill="#fff"/><path d="M28.6 39.5h6.8l-3.4 4.4z" fill="#ffc21a" stroke="#141414" stroke-width="1.6" stroke-linejoin="round"/><circle cx="18" cy="41" r="2.8" fill="#e5372b" opacity=".4"/><circle cx="46" cy="41" r="2.8" fill="#e5372b" opacity=".4"/></svg><span>랜덤<span class="brand-num">7942</span></span></div>
-        <div><span class="family-badge">펭귄 툴즈 패밀리</span></div>
+        <div><a class="family-badge" href="https://penguintools.kr/" target="_blank" rel="noopener" title="펭귄 툴즈로 이동">펭귄 툴즈 패밀리 ›</a></div>
         <div class="hero-tag">브레인스토밍</div>
       </div>
       <p>준비되면 아래 버튼을 눌러 익명으로 누군가와 연결하세요.</p>
@@ -209,6 +209,9 @@
 
   <!-- 사이트명 (채팅 외 화면 최상단 가운데) -->
   <div id="topbrand" class="topbrand"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="28" fill="#141414"/><path d="M32 20.5c-4-7-19-7-20.5 6C10 40 18.5 53 32 53s22-13 20.5-26.5C51 13.5 36 13.5 32 20.5z" fill="#fff"/><ellipse cx="23.5" cy="33" rx="3.2" ry="4" fill="#141414"/><ellipse cx="40.5" cy="33" rx="3.2" ry="4" fill="#141414"/><circle cx="24.6" cy="31.6" r="1.1" fill="#fff"/><circle cx="41.6" cy="31.6" r="1.1" fill="#fff"/><path d="M28.6 39.5h6.8l-3.4 4.4z" fill="#ffc21a" stroke="#141414" stroke-width="1.6" stroke-linejoin="round"/><circle cx="18" cy="41" r="2.8" fill="#e5372b" opacity=".4"/><circle cx="46" cy="41" r="2.8" fill="#e5372b" opacity=".4"/></svg><span>랜덤<span class="brand-num">7942</span></span></div>
+
+  <!-- 테마 전환 (채팅 전 모든 화면 위에 떠 있음, 채팅 중엔 헤더 버튼 사용) -->
+  <button id="btn-theme" class="theme-toggle" title="다크/라이트 전환" aria-label="테마 전환">다크</button>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>

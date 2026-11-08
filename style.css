@@ -53,7 +53,11 @@ body {
 .family-badge {
   display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 800; line-height: 1.5;
   color: #141414; background: var(--hwang); border: 2px solid #141414; border-radius: 6px; padding: 1px 8px;
+  text-decoration: none; box-shadow: 2px 2px 0 #141414; transition: transform .12s, box-shadow .12s;
 }
+.card a.family-badge { color: #141414; }
+a.family-badge:hover, a.family-badge:focus-visible { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 #141414; }
+a.family-badge:active { transform: translate(2px, 2px); box-shadow: none; }
 .hero-tag { color: var(--sub); font-size: 14px; font-weight: 600; margin-top: 8px; }
 .hero-live { margin-top: 10px; font-size: 13px; color: var(--sub); }
 .hero-live b { color: var(--nok); }
