@@ -54,6 +54,7 @@ function presenceOn() {
 function presenceOff() {
   if (!hasFirebase || !uid) return;
   try { db.ref("presence/" + uid).remove(); } catch (e) {}
+  try { db.ref("online/" + uid).remove(); } catch (e) {}
   // 대화 중이었으면 상대에게 종료 전달
   if (state.roomId) { try { db.ref("rooms/" + state.roomId + "/closed").set(true); } catch (e) {} }
 }
@@ -76,6 +77,7 @@ function setPresence() {
     gender: (state && state.gender) || "미정",
     region: (state && state.region) || "미정",
   });
+  db.ref("online/" + uid).set(now()).catch(() => {});   // 접속자 수 집계용(시각만, 개인정보 없음)
 }
 
 const hasFirebase = !!(window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey);
@@ -132,6 +134,7 @@ if (hasFirebase) {
       uid = u.uid;
       attachAssignListener();
       db.ref("presence/" + uid).onDisconnect().remove();  // 접속 끊기면 자동 제거
+      db.ref("online/" + uid).onDisconnect().remove().catch(() => {});
       presenceOn();
     }
   });
@@ -1160,3 +1163,25 @@ document.querySelectorAll("a.family-badge").forEach((a) => {
     if (win) { try { win.opener = null; } catch (err) {} win.focus(); e.preventDefault(); }
   });
 });
+
+// 비밀 버튼: 「상대를 찾는 중」 카드 오른쪽 위를 누르면 현재 접속자 수 표시, 다시 누르면 숨김
+(function () {
+  const btn = $("pc-secret"), box = $("pc-count");
+  if (!btn || !box) return;
+  let ref = null;
+  const off = () => { if (ref) { ref.off(); ref = null; } box.hidden = true; };
+  btn.addEventListener("click", () => {
+    if (!box.hidden) { off(); return; }
+    box.hidden = false; box.textContent = "접속자 확인 중…";
+    if (!hasFirebase || !uid) { box.textContent = "접속자 수를 불러올 수 없어요"; return; }
+    ref = db.ref("online");
+    ref.on("value", (snap) => {
+      const fresh = now() - 70000; let n = 0;   // 70초 내 갱신된 접속만(관리자 집계와 같은 기준)
+      snap.forEach((ch) => { if ((ch.val() || 0) >= fresh) n++; });
+      box.textContent = "현재 접속자 " + Math.max(n, 1) + "명";
+    }, () => { box.textContent = "접속자 수를 불러올 수 없어요"; ref = null; });
+  });
+  // 대기 화면을 벗어나면 자동으로 숨김
+  new MutationObserver(() => { if (!$("screen-waiting").classList.contains("active")) off(); })
+    .observe($("screen-waiting"), { attributes: true, attributeFilter: ["class"] });
+})();

@@ -473,3 +473,8 @@ body.brand-hidden .hero-logo, body.brand-hidden .topbrand { opacity: 0; }
 .seo-about ul { margin: 0 0 8px; padding-left: 18px; }
 .seo-about li { margin: 2px 0; }
 .seo-about b { color: var(--fg); }
+
+/* 비밀 버튼: 대기 카드 오른쪽 위(투명), 접속자 수 표시 */
+#screen-waiting .card { position: relative; }
+.pc-secret { position: absolute; top: 0; right: 0; width: 56px; height: 56px; min-height: 0; padding: 0; margin: 0; background: transparent; border: 0; box-shadow: none; opacity: 0; cursor: default; -webkit-tap-highlight-color: transparent; }
+.pc-count { position: absolute; top: 10px; right: 12px; font-size: 12px; font-weight: 800; color: var(--fg); background: var(--soft); border: 2px solid var(--line); border-radius: 999px; padding: 3px 10px; pointer-events: none; }
