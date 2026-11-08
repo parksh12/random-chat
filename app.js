@@ -1150,3 +1150,13 @@ applyBrandHidden();
 if (ADMIN_MODE) { refreshNick(); show("ready"); }
 else show("consent");
 if (!hasFirebase) console.info("데모 모드: Firebase 설정이 비어 있습니다. config.js를 채우면 실제로 동작합니다.");
+
+// 「펭귄 툴즈 패밀리」 배지: 별도 새 창으로 열기(대표님 지시). 막히면 기본 링크(새 탭)로
+document.querySelectorAll("a.family-badge").forEach((a) => {
+  a.addEventListener("click", (e) => {
+    const w = Math.min(1200, screen.availWidth - 40), h = Math.min(900, screen.availHeight - 60);
+    const left = Math.max(0, ((screen.availWidth - w) / 2) | 0), top = Math.max(0, ((screen.availHeight - h) / 2) | 0);
+    const win = window.open(a.href, "penguintools", `popup=yes,width=${w},height=${h},left=${left},top=${top}`);
+    if (win) { try { win.opener = null; } catch (err) {} win.focus(); e.preventDefault(); }
+  });
+});
