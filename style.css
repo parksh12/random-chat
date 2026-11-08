@@ -465,3 +465,11 @@ body.brand-hidden .hero-logo, body.brand-hidden .topbrand { opacity: 0; }
            border: 2px solid var(--line); border-radius: 10px; background: var(--card); color: var(--fg); }
 .pb-memo:focus { outline: 3px solid var(--hwang); outline-offset: 1px; }
 .pb-acts { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+
+/* 첫 화면 소개(검색 노출용, 실제로 보이는 안내) */
+.seo-about { width: 100%; max-width: 440px; margin: 18px auto 0; padding: 0 6px; color: var(--sub); font-size: 13px; line-height: 1.65; box-sizing: border-box; }
+.seo-about h2 { font-size: 15px; color: var(--fg); margin: 0 0 6px; }
+.seo-about p { margin: 0 0 8px; }
+.seo-about ul { margin: 0 0 8px; padding-left: 18px; }
+.seo-about li { margin: 2px 0; }
+.seo-about b { color: var(--fg); }
